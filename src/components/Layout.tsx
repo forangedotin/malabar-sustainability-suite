@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -136,14 +135,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <NavItem to="/reports" icon={<FileText className="h-5 w-5" />} label="Reports" />
             <NavItem to="/managers" icon={<Users className="h-5 w-5" />} label="Managers" adminOnly={true} />
             
-            {/* New navigation items for vehicles and drivers */}
             <div className="my-2 border-t pt-2">
               <h4 className="mb-1 px-3 text-xs font-semibold uppercase text-muted-foreground">
                 Transport
               </h4>
               <NavItem to="/vehicles" icon={<Car className="h-5 w-5" />} label="Vehicles" />
               <NavItem to="/drivers" icon={<User className="h-5 w-5" />} label="Drivers" />
-              <NavItem to="/trips" icon={<FileRoute className="h-5 w-5" />} label="Trips" />
+              <NavItem to="/trips" icon={<Route className="h-5 w-5" />} label="Trips" />
               <NavItem to="/token" icon={<Search className="h-5 w-5" />} label="Token Lookup" />
             </div>
           </div>
@@ -168,9 +166,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1">
-        {/* Mobile header */}
         <header className="flex h-16 items-center border-b px-4 md:hidden">
           <Button variant="ghost" size="icon" onClick={toggleSidebar}>
             <Menu className="h-5 w-5" />
@@ -197,11 +193,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
         </header>
 
-        {/* Page content */}
         <div className="p-4 md:p-6">{children}</div>
       </main>
 
-      {/* Overlay for mobile sidebar */}
       {isSidebarOpen && isMobile && (
         <div
           className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"

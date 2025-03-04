@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import Layout from '@/components/Layout';
@@ -42,7 +41,8 @@ import {
   ArrowRightLeft,
   Check,
   Clock,
-  Package
+  Package,
+  Route
 } from 'lucide-react';
 import { 
   getTrips, 
@@ -65,7 +65,6 @@ const TripsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [openAddTrip, setOpenAddTrip] = useState(false);
   
-  // Form states for new trip
   const [vehicleId, setVehicleId] = useState('');
   const [driverId, setDriverId] = useState('');
   const [fromLocationId, setFromLocationId] = useState('');
@@ -429,7 +428,7 @@ const TripsPage = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center p-8 text-center">
-                <FileRoute className="h-10 w-10 text-muted-foreground" />
+                <Route className="h-10 w-10 text-muted-foreground" />
                 <h3 className="mt-2 text-lg font-semibold">No trips found</h3>
                 {searchQuery ? (
                   <p className="text-muted-foreground">

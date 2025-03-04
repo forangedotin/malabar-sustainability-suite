@@ -66,14 +66,14 @@ const VehiclesPage = () => {
   
   // Form states for new vehicle
   const [regNumber, setRegNumber] = useState('');
-  const [vehicleType, setVehicleType] = useState('');
+  const [vehicleType, setVehicleType] = useState<'truck' | 'pickup' | 'van' | 'auto' | 'other'>('truck');
   const [capacity, setCapacity] = useState('');
   const [capacityUnit, setCapacityUnit] = useState('');
   const [locationId, setLocationId] = useState('');
   const [notes, setNotes] = useState('');
   
   // Form states for updating status
-  const [newStatus, setNewStatus] = useState('');
+  const [newStatus, setNewStatus] = useState<'available' | 'maintenance' | 'on_route' | 'loading' | 'unloading'>('available');
   const [newLocationId, setNewLocationId] = useState('');
   
   const fetchVehicles = async () => {
@@ -125,7 +125,7 @@ const VehiclesPage = () => {
     
     if (result.success) {
       setOpenUpdateStatus(false);
-      setNewStatus('');
+      setNewStatus('available');
       setNewLocationId('');
       fetchVehicles();
     }
@@ -133,7 +133,7 @@ const VehiclesPage = () => {
 
   const resetVehicleForm = () => {
     setRegNumber('');
-    setVehicleType('');
+    setVehicleType('truck');
     setCapacity('');
     setCapacityUnit('');
     setLocationId('');
@@ -142,7 +142,7 @@ const VehiclesPage = () => {
 
   const openStatusUpdateDialog = (vehicle) => {
     setSelectedVehicle(vehicle);
-    setNewStatus(vehicle.status);
+    setNewStatus(vehicle.status as 'available' | 'maintenance' | 'on_route' | 'loading' | 'unloading');
     setNewLocationId(vehicle.current_location?.id?.toString() || '');
     setOpenUpdateStatus(true);
   };
