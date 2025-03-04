@@ -60,6 +60,39 @@ export type Database = {
           },
         ]
       }
+      drivers: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: number
+          is_active: boolean | null
+          license_number: string
+          name: string
+          notes: string | null
+          phone: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: number
+          is_active?: boolean | null
+          license_number: string
+          name: string
+          notes?: string | null
+          phone: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: number
+          is_active?: boolean | null
+          license_number?: string
+          name?: string
+          notes?: string | null
+          phone?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -305,11 +338,201 @@ export type Database = {
           },
         ]
       }
+      trips: {
+        Row: {
+          arrival_time: string | null
+          created_by: string
+          departure_time: string | null
+          driver_id: number
+          from_location_id: number
+          id: number
+          material_carried: Database["public"]["Enums"]["material_type"] | null
+          notes: string | null
+          quantity: number | null
+          status: string | null
+          to_location_id: number
+          unit: string | null
+          vehicle_id: number
+        }
+        Insert: {
+          arrival_time?: string | null
+          created_by: string
+          departure_time?: string | null
+          driver_id: number
+          from_location_id: number
+          id?: number
+          material_carried?: Database["public"]["Enums"]["material_type"] | null
+          notes?: string | null
+          quantity?: number | null
+          status?: string | null
+          to_location_id: number
+          unit?: string | null
+          vehicle_id: number
+        }
+        Update: {
+          arrival_time?: string | null
+          created_by?: string
+          departure_time?: string | null
+          driver_id?: number
+          from_location_id?: number
+          id?: number
+          material_carried?: Database["public"]["Enums"]["material_type"] | null
+          notes?: string | null
+          quantity?: number | null
+          status?: string | null
+          to_location_id?: number
+          unit?: string | null
+          vehicle_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trips_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_from_location_id_fkey"
+            columns: ["from_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_to_location_id_fkey"
+            columns: ["to_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_assignments: {
+        Row: {
+          assignment_date: string
+          created_by: string
+          driver_id: number
+          id: number
+          is_active: boolean | null
+          notes: string | null
+          return_date: string | null
+          vehicle_id: number
+        }
+        Insert: {
+          assignment_date?: string
+          created_by: string
+          driver_id: number
+          id?: number
+          is_active?: boolean | null
+          notes?: string | null
+          return_date?: string | null
+          vehicle_id: number
+        }
+        Update: {
+          assignment_date?: string
+          created_by?: string
+          driver_id?: number
+          id?: number
+          is_active?: boolean | null
+          notes?: string | null
+          return_date?: string | null
+          vehicle_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_assignments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_assignments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_assignments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          capacity: number | null
+          capacity_unit: string | null
+          created_at: string
+          current_location_id: number | null
+          id: number
+          notes: string | null
+          registration_number: string
+          status: Database["public"]["Enums"]["vehicle_status"]
+          token_code: string | null
+          type: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Insert: {
+          capacity?: number | null
+          capacity_unit?: string | null
+          created_at?: string
+          current_location_id?: number | null
+          id?: number
+          notes?: string | null
+          registration_number: string
+          status?: Database["public"]["Enums"]["vehicle_status"]
+          token_code?: string | null
+          type: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Update: {
+          capacity?: number | null
+          capacity_unit?: string | null
+          created_at?: string
+          current_location_id?: number | null
+          id?: number
+          notes?: string | null
+          registration_number?: string
+          status?: Database["public"]["Enums"]["vehicle_status"]
+          token_code?: string | null
+          type?: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_current_location_id_fkey"
+            columns: ["current_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      generate_token_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       is_admin: {
         Args: {
           user_id: string
@@ -328,6 +551,13 @@ export type Database = {
         | "other"
       payment_status: "paid" | "pending" | "payment_required"
       user_role: "admin" | "manager"
+      vehicle_status:
+        | "available"
+        | "maintenance"
+        | "on_route"
+        | "loading"
+        | "unloading"
+      vehicle_type: "truck" | "pickup" | "van" | "auto" | "other"
     }
     CompositeTypes: {
       [_ in never]: never

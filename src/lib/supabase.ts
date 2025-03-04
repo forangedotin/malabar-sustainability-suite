@@ -1,14 +1,11 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { toast } from '@/components/ui/use-toast';
 
-// These are public keys - they can be exposed in client code
 const supabaseUrl = 'https://gvutttohyqrwqojajlpp.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2dXR0dG9oeXFyd3FvamFqbHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwODQ3MzAsImV4cCI6MjA1NjY2MDczMH0.rj0CMm3ibJl2Y5LjE0x-zJU__UTQisJ3YxTSFyOoi-U';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Auth helpers
 export async function signIn(email: string, password: string) {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -60,9 +57,7 @@ export async function getUserRole() {
   return data.role;
 }
 
-// Create a manager account (admin only)
 export async function createManager(email: string, password: string, firstName: string, lastName: string, phone: string) {
-  // First check if user is admin
   const isAdmin = await getUserRole() === 'admin';
   if (!isAdmin) {
     toast({
@@ -73,7 +68,6 @@ export async function createManager(email: string, password: string, firstName: 
     return { success: false, error: { message: 'Unauthorized' } };
   }
   
-  // 1. Create auth user
   const { data, error } = await supabase.auth.admin.createUser({
     email,
     password,
@@ -94,7 +88,6 @@ export async function createManager(email: string, password: string, firstName: 
     return { success: false, error };
   }
   
-  // 2. Update phone number in profile
   const { error: profileError } = await supabase
     .from('profiles')
     .update({ phone })
@@ -116,7 +109,6 @@ export async function createManager(email: string, password: string, firstName: 
   return { success: true, error: null };
 }
 
-// Get user profile
 export async function getProfile() {
   const user = await getCurrentUser();
   
@@ -136,7 +128,6 @@ export async function getProfile() {
   return data;
 }
 
-// Locations helpers
 export async function getLocations(type?: 'godown' | 'collection_point') {
   let query = supabase.from('locations').select('*');
   
@@ -184,7 +175,6 @@ export async function createLocation(name: string, address: string, district: st
   return { success: true, data, error: null };
 }
 
-// Collections helpers
 export async function createCollection(
   location_id: number,
   material: string,
@@ -232,7 +222,6 @@ export async function createCollection(
     description: `${quantity} ${unit} of ${material} collected`,
   });
   
-  // Update inventory for the corresponding godown
   const { data: locationData } = await supabase
     .from('locations')
     .select('id, type')
@@ -240,7 +229,6 @@ export async function createCollection(
     .single();
     
   if (locationData?.type === 'collection_point') {
-    // Find the closest godown (for simplicity, just get the first godown)
     const { data: godowns } = await supabase
       .from('locations')
       .select('id')
@@ -251,7 +239,6 @@ export async function createCollection(
       await updateInventory(godowns[0].id, material, quantity, 'add');
     }
   } else {
-    // Collection was at godown, directly update its inventory
     await updateInventory(location_id, material, quantity, 'add');
   }
   
@@ -283,7 +270,6 @@ export async function getDailyCollections(date: string) {
   return data;
 }
 
-// Inventory helpers
 export async function getInventoryByGodown(godownId: number) {
   const { data, error } = await supabase
     .from('inventory')
@@ -304,7 +290,6 @@ export async function updateInventory(
   quantity: number, 
   operation: 'add' | 'subtract'
 ) {
-  // First check if the material exists in inventory
   const { data: existing, error: fetchError } = await supabase
     .from('inventory')
     .select('*')
@@ -320,7 +305,6 @@ export async function updateInventory(
   let newQuantity: number;
   
   if (existing) {
-    // Update existing inventory
     newQuantity = operation === 'add' 
       ? existing.quantity + quantity 
       : existing.quantity - quantity;
@@ -347,7 +331,6 @@ export async function updateInventory(
       return { success: false, error: updateError };
     }
   } else if (operation === 'add') {
-    // Create new inventory entry
     const { error: insertError } = await supabase
       .from('inventory')
       .insert({
@@ -361,7 +344,6 @@ export async function updateInventory(
       return { success: false, error: insertError };
     }
   } else {
-    // Trying to subtract from non-existent inventory
     toast({
       title: 'Inventory error',
       description: 'Cannot subtract from non-existent inventory',
@@ -376,7 +358,6 @@ export async function updateInventory(
   return { success: true, error: null };
 }
 
-// Stock transfers
 export async function transferStock(
   fromGodownId: number,
   toGodownId: number,
@@ -395,7 +376,6 @@ export async function transferStock(
     return { success: false, error: { message: 'Authentication required' } };
   }
   
-  // First subtract from source godown
   const sourceUpdate = await updateInventory(
     fromGodownId,
     material,
@@ -407,7 +387,6 @@ export async function transferStock(
     return sourceUpdate;
   }
   
-  // Add to destination godown
   const destUpdate = await updateInventory(
     toGodownId,
     material,
@@ -416,7 +395,6 @@ export async function transferStock(
   );
   
   if (!destUpdate.success) {
-    // Revert the source update
     await updateInventory(
       fromGodownId,
       material,
@@ -426,7 +404,6 @@ export async function transferStock(
     return destUpdate;
   }
   
-  // Record the transfer
   const { data, error } = await supabase
     .from('stock_transfers')
     .insert({
@@ -443,7 +420,6 @@ export async function transferStock(
   if (error) {
     console.error('Error recording transfer:', error);
     
-    // Attempt to revert both inventory changes
     await updateInventory(
       fromGodownId,
       material,
@@ -475,7 +451,6 @@ export async function transferStock(
   return { success: true, data, error: null };
 }
 
-// Sales helpers
 export async function recordSale(
   godownId: number,
   buyerName: string,
@@ -487,7 +462,6 @@ export async function recordSale(
   amountDue: number = 0,
   notes?: string
 ) {
-  // First update inventory
   const inventoryUpdate = await updateInventory(
     godownId,
     material,
@@ -499,7 +473,6 @@ export async function recordSale(
     return inventoryUpdate;
   }
   
-  // Then record the sale
   const { data, error } = await supabase
     .from('sales')
     .insert({
@@ -519,7 +492,6 @@ export async function recordSale(
   if (error) {
     console.error('Error recording sale:', error);
     
-    // Revert inventory change
     await updateInventory(
       godownId,
       material,
@@ -544,7 +516,6 @@ export async function recordSale(
   return { success: true, data, error: null };
 }
 
-// Expenses
 export async function recordExpense(
   category: string,
   amount: number,
@@ -591,6 +562,417 @@ export async function recordExpense(
   toast({
     title: 'Expense recorded',
     description: `Expense of ${amount} for ${category} recorded`,
+  });
+  
+  return { success: true, data, error: null };
+}
+
+export async function getVehicles() {
+  const { data, error } = await supabase
+    .from('vehicles')
+    .select(`
+      *,
+      current_location:locations(id, name, type)
+    `)
+    .order('registration_number');
+    
+  if (error) {
+    console.error('Error fetching vehicles:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function getVehicleByToken(tokenCode: string) {
+  const { data, error } = await supabase
+    .from('vehicles')
+    .select(`
+      *,
+      current_location:locations(id, name, type),
+      assignments:vehicle_assignments(
+        id,
+        driver:drivers(*),
+        is_active,
+        assignment_date
+      )
+    `)
+    .eq('token_code', tokenCode.toUpperCase())
+    .eq('vehicle_assignments.is_active', true)
+    .maybeSingle();
+    
+  if (error) {
+    console.error('Error fetching vehicle by token:', error);
+    return null;
+  }
+  
+  return data;
+}
+
+export async function createVehicle(
+  registrationNumber: string,
+  type: 'truck' | 'pickup' | 'van' | 'auto' | 'other',
+  capacity?: number,
+  capacityUnit?: string,
+  currentLocationId?: number,
+  notes?: string
+) {
+  const { data, error } = await supabase
+    .from('vehicles')
+    .insert({
+      registration_number: registrationNumber,
+      type,
+      capacity,
+      capacity_unit: capacityUnit,
+      current_location_id: currentLocationId,
+      notes
+    })
+    .select()
+    .single();
+    
+  if (error) {
+    toast({
+      title: 'Failed to create vehicle',
+      description: error.message,
+      variant: 'destructive',
+    });
+    return { success: false, error };
+  }
+  
+  toast({
+    title: 'Vehicle created',
+    description: `Vehicle ${registrationNumber} has been added to the system`,
+  });
+  
+  return { success: true, data, error: null };
+}
+
+export async function updateVehicleStatus(
+  vehicleId: number,
+  status: 'available' | 'maintenance' | 'on_route' | 'loading' | 'unloading',
+  currentLocationId?: number
+) {
+  const updates: any = { status };
+  
+  if (currentLocationId) {
+    updates.current_location_id = currentLocationId;
+  }
+  
+  const { data, error } = await supabase
+    .from('vehicles')
+    .update(updates)
+    .eq('id', vehicleId)
+    .select()
+    .single();
+    
+  if (error) {
+    toast({
+      title: 'Failed to update vehicle status',
+      description: error.message,
+      variant: 'destructive',
+    });
+    return { success: false, error };
+  }
+  
+  toast({
+    title: 'Vehicle status updated',
+    description: `Vehicle status changed to ${status}`,
+  });
+  
+  return { success: true, data, error: null };
+}
+
+export async function getDrivers() {
+  const { data, error } = await supabase
+    .from('drivers')
+    .select('*')
+    .order('name');
+    
+  if (error) {
+    console.error('Error fetching drivers:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function getAvailableDrivers() {
+  const { data, error } = await supabase
+    .from('drivers')
+    .select(`
+      *,
+      vehicle_assignments!inner(
+        id,
+        is_active
+      )
+    `)
+    .eq('is_active', true)
+    .eq('vehicle_assignments.is_active', false)
+    .order('name');
+    
+  if (error) {
+    console.error('Error fetching available drivers:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function createDriver(
+  name: string,
+  phone: string,
+  licenseNumber: string,
+  address?: string,
+  notes?: string
+) {
+  const { data, error } = await supabase
+    .from('drivers')
+    .insert({
+      name,
+      phone,
+      license_number: licenseNumber,
+      address,
+      notes,
+      is_active: true
+    })
+    .select()
+    .single();
+    
+  if (error) {
+    toast({
+      title: 'Failed to create driver',
+      description: error.message,
+      variant: 'destructive',
+    });
+    return { success: false, error };
+  }
+  
+  toast({
+    title: 'Driver created',
+    description: `Driver ${name} has been added to the system`,
+  });
+  
+  return { success: true, data, error: null };
+}
+
+export async function getVehicleAssignments(includeInactive = false) {
+  let query = supabase
+    .from('vehicle_assignments')
+    .select(`
+      *,
+      vehicle:vehicles(*),
+      driver:drivers(*)
+    `);
+  
+  if (!includeInactive) {
+    query = query.eq('is_active', true);
+  }
+  
+  const { data, error } = await query.order('assignment_date', { ascending: false });
+    
+  if (error) {
+    console.error('Error fetching vehicle assignments:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function assignVehicleToDriver(
+  vehicleId: number,
+  driverId: number,
+  notes?: string
+) {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    toast({
+      title: 'Authentication required',
+      description: 'You must be logged in to assign vehicles',
+      variant: 'destructive',
+    });
+    return { success: false, error: { message: 'Authentication required' } };
+  }
+  
+  const { data: existingAssignment } = await supabase
+    .from('vehicle_assignments')
+    .select('id')
+    .eq('vehicle_id', vehicleId)
+    .eq('is_active', true)
+    .maybeSingle();
+    
+  if (existingAssignment) {
+    await supabase
+      .from('vehicle_assignments')
+      .update({
+        is_active: false,
+        return_date: new Date().toISOString()
+      })
+      .eq('id', existingAssignment.id);
+  }
+  
+  const { data, error } = await supabase
+    .from('vehicle_assignments')
+    .insert({
+      vehicle_id: vehicleId,
+      driver_id: driverId,
+      created_by: user.id,
+      notes,
+      is_active: true
+    })
+    .select()
+    .single();
+    
+  if (error) {
+    toast({
+      title: 'Failed to assign vehicle',
+      description: error.message,
+      variant: 'destructive',
+    });
+    return { success: false, error };
+  }
+  
+  toast({
+    title: 'Vehicle assigned',
+    description: `Vehicle has been assigned to driver successfully`,
+  });
+  
+  return { success: true, data, error: null };
+}
+
+export async function endVehicleAssignment(assignmentId: number) {
+  const { data, error } = await supabase
+    .from('vehicle_assignments')
+    .update({
+      is_active: false,
+      return_date: new Date().toISOString()
+    })
+    .eq('id', assignmentId)
+    .select()
+    .single();
+    
+  if (error) {
+    toast({
+      title: 'Failed to end assignment',
+      description: error.message,
+      variant: 'destructive',
+    });
+    return { success: false, error };
+  }
+  
+  toast({
+    title: 'Assignment ended',
+    description: `Vehicle assignment has been ended`,
+  });
+  
+  return { success: true, data, error: null };
+}
+
+export async function getTrips() {
+  const { data, error } = await supabase
+    .from('trips')
+    .select(`
+      *,
+      vehicle:vehicles(*),
+      driver:drivers(*),
+      from_location:locations!from_location_id(*),
+      to_location:locations!to_location_id(*)
+    `)
+    .order('departure_time', { ascending: false });
+    
+  if (error) {
+    console.error('Error fetching trips:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function createTrip(
+  vehicleId: number,
+  driverId: number,
+  fromLocationId: number,
+  toLocationId: number,
+  materialCarried: string,
+  quantity: number,
+  unit: string,
+  notes?: string
+) {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    toast({
+      title: 'Authentication required',
+      description: 'You must be logged in to record trips',
+      variant: 'destructive',
+    });
+    return { success: false, error: { message: 'Authentication required' } };
+  }
+  
+  const { data, error } = await supabase
+    .from('trips')
+    .insert({
+      vehicle_id: vehicleId,
+      driver_id: driverId,
+      from_location_id: fromLocationId,
+      to_location_id: toLocationId,
+      material_carried: materialCarried,
+      quantity,
+      unit,
+      created_by: user.id,
+      notes
+    })
+    .select()
+    .single();
+    
+  if (error) {
+    toast({
+      title: 'Failed to create trip',
+      description: error.message,
+      variant: 'destructive',
+    });
+    return { success: false, error };
+  }
+  
+  await updateVehicleStatus(vehicleId, 'on_route', fromLocationId);
+  
+  toast({
+    title: 'Trip created',
+    description: `Trip has been recorded successfully`,
+  });
+  
+  return { success: true, data, error: null };
+}
+
+export async function completeTrip(
+  tripId: number,
+  vehicleId: number,
+  toLocationId: number
+) {
+  const { data, error } = await supabase
+    .from('trips')
+    .update({
+      status: 'completed',
+      arrival_time: new Date().toISOString()
+    })
+    .eq('id', tripId)
+    .select()
+    .single();
+    
+  if (error) {
+    toast({
+      title: 'Failed to complete trip',
+      description: error.message,
+      variant: 'destructive',
+    });
+    return { success: false, error };
+  }
+  
+  await updateVehicleStatus(vehicleId, 'available', toLocationId);
+  
+  toast({
+    title: 'Trip completed',
+    description: `Trip has been marked as completed`,
   });
   
   return { success: true, data, error: null };

@@ -15,6 +15,9 @@ import {
   X,
   LogOut,
   User,
+  FileRoute,
+  Search,
+  Car
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -132,6 +135,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <NavItem to="/expenses" icon={<DollarSign className="h-5 w-5" />} label="Expenses" />
             <NavItem to="/reports" icon={<FileText className="h-5 w-5" />} label="Reports" />
             <NavItem to="/managers" icon={<Users className="h-5 w-5" />} label="Managers" adminOnly={true} />
+            
+            {/* New navigation items for vehicles and drivers */}
+            <div className="my-2 border-t pt-2">
+              <h4 className="mb-1 px-3 text-xs font-semibold uppercase text-muted-foreground">
+                Transport
+              </h4>
+              <NavItem to="/vehicles" icon={<Car className="h-5 w-5" />} label="Vehicles" />
+              <NavItem to="/drivers" icon={<User className="h-5 w-5" />} label="Drivers" />
+              <NavItem to="/trips" icon={<FileRoute className="h-5 w-5" />} label="Trips" />
+              <NavItem to="/token" icon={<Search className="h-5 w-5" />} label="Token Lookup" />
+            </div>
           </div>
         </nav>
         <div className="border-t p-4">
