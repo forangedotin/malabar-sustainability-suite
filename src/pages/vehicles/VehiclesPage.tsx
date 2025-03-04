@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import Layout from '@/components/Layout';
@@ -46,6 +45,9 @@ import {
 import { getVehicles, createVehicle, getLocations, updateVehicleStatus } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 
+type VehicleType = 'truck' | 'pickup' | 'van' | 'auto' | 'other';
+type VehicleStatus = 'available' | 'maintenance' | 'on_route' | 'loading' | 'unloading';
+
 const statusColors = {
   available: 'bg-green-500',
   maintenance: 'bg-yellow-500',
@@ -64,18 +66,16 @@ const VehiclesPage = () => {
   const [openUpdateStatus, setOpenUpdateStatus] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   
-  // Form states for new vehicle
   const [regNumber, setRegNumber] = useState('');
-  const [vehicleType, setVehicleType] = useState<'truck' | 'pickup' | 'van' | 'auto' | 'other'>('truck');
+  const [vehicleType, setVehicleType] = useState<VehicleType>('truck');
   const [capacity, setCapacity] = useState('');
   const [capacityUnit, setCapacityUnit] = useState('');
   const [locationId, setLocationId] = useState('');
   const [notes, setNotes] = useState('');
   
-  // Form states for updating status
-  const [newStatus, setNewStatus] = useState<'available' | 'maintenance' | 'on_route' | 'loading' | 'unloading'>('available');
+  const [newStatus, setNewStatus] = useState<VehicleStatus>('available');
   const [newLocationId, setNewLocationId] = useState('');
-  
+
   const fetchVehicles = async () => {
     setIsLoading(true);
     const vehiclesData = await getVehicles();
@@ -142,7 +142,7 @@ const VehiclesPage = () => {
 
   const openStatusUpdateDialog = (vehicle) => {
     setSelectedVehicle(vehicle);
-    setNewStatus(vehicle.status as 'available' | 'maintenance' | 'on_route' | 'loading' | 'unloading');
+    setNewStatus(vehicle.status as VehicleStatus);
     setNewLocationId(vehicle.current_location?.id?.toString() || '');
     setOpenUpdateStatus(true);
   };
@@ -199,7 +199,7 @@ const VehiclesPage = () => {
                       </Label>
                       <Select
                         value={vehicleType}
-                        onValueChange={setVehicleType}
+                        onValueChange={(value: VehicleType) => setVehicleType(value)}
                         required
                       >
                         <SelectTrigger className="col-span-4">
@@ -381,7 +381,6 @@ const VehiclesPage = () => {
           </CardContent>
         </Card>
 
-        {/* Status update dialog */}
         <Dialog open={openUpdateStatus} onOpenChange={setOpenUpdateStatus}>
           <DialogContent className="sm:max-w-[425px]">
             <form onSubmit={handleUpdateStatus}>

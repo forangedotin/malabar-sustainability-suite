@@ -31,7 +31,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  FileRoute,
+  Route,
   Search,
   Plus,
   RefreshCw,
@@ -41,8 +41,7 @@ import {
   ArrowRightLeft,
   Check,
   Clock,
-  Package,
-  Route
+  Package
 } from 'lucide-react';
 import { 
   getTrips, 

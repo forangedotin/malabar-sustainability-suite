@@ -14,7 +14,7 @@ import {
   X,
   LogOut,
   User,
-  FileRoute,
+  Route,
   Search,
   Car
 } from 'lucide-react';
@@ -83,7 +83,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar for desktop */}
       <aside
         className={cn(
           'fixed inset-y-0 z-50 flex w-64 flex-col border-r bg-background transition-transform duration-300 ease-in-out md:relative md:translate-x-0',
