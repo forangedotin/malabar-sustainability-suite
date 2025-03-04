@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { toast } from '@/components/ui/use-toast';
 
 // These are public keys - they can be exposed in client code
-const supabaseUrl = 'https://supabaseprojecturl.supabase.co';
-const supabaseAnonKey = 'your-anon-key'; // Replace this once you connect your Supabase project
+const supabaseUrl = 'https://gvutttohyqrwqojajlpp.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2dXR0dG9oeXFyd3FvamFqbHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwODQ3MzAsImV4cCI6MjA1NjY2MDczMH0.rj0CMm3ibJl2Y5LjE0x-zJU__UTQisJ3YxTSFyOoi-U';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -60,12 +60,72 @@ export async function getUserRole() {
   return data.role;
 }
 
-// Profiles helpers
-export async function getProfile(userId: string) {
+// Create a manager account (admin only)
+export async function createManager(email: string, password: string, firstName: string, lastName: string, phone: string) {
+  // First check if user is admin
+  const isAdmin = await getUserRole() === 'admin';
+  if (!isAdmin) {
+    toast({
+      title: 'Unauthorized',
+      description: 'Only admins can create manager accounts',
+      variant: 'destructive',
+    });
+    return { success: false, error: { message: 'Unauthorized' } };
+  }
+  
+  // 1. Create auth user
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    data: {
+      first_name: firstName,
+      last_name: lastName,
+      role: 'manager'
+    }
+  });
+  
+  if (error) {
+    toast({
+      title: 'Failed to create user',
+      description: error.message,
+      variant: 'destructive',
+    });
+    return { success: false, error };
+  }
+  
+  // 2. Update phone number in profile
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ phone })
+    .eq('id', data.user.id);
+    
+  if (profileError) {
+    toast({
+      title: 'Failed to update profile',
+      description: profileError.message,
+      variant: 'destructive',
+    });
+  }
+  
+  toast({
+    title: 'Manager created',
+    description: `Manager account for ${firstName} ${lastName} has been created`,
+  });
+  
+  return { success: true, error: null };
+}
+
+// Get user profile
+export async function getProfile() {
+  const user = await getCurrentUser();
+  
+  if (!user) return null;
+  
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', userId)
+    .eq('id', user.id)
     .single();
     
   if (error) {
@@ -74,46 +134,6 @@ export async function getProfile(userId: string) {
   }
   
   return data;
-}
-
-export async function createManager(email: string, password: string, firstName: string, lastName: string, phone: string) {
-  // 1. Create auth user
-  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-  
-  if (authError) {
-    toast({
-      title: 'Failed to create user',
-      description: authError.message,
-      variant: 'destructive',
-    });
-    return { success: false, error: authError };
-  }
-  
-  // 2. Create profile for user
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .insert({
-      id: authData.user.id,
-      first_name: firstName,
-      last_name: lastName,
-      phone,
-      role: 'manager',
-    });
-    
-  if (profileError) {
-    toast({
-      title: 'Failed to create profile',
-      description: profileError.message,
-      variant: 'destructive',
-    });
-    return { success: false, error: profileError };
-  }
-  
-  return { success: true, error: null };
 }
 
 // Locations helpers
@@ -156,30 +176,44 @@ export async function createLocation(name: string, address: string, district: st
     return { success: false, error };
   }
   
+  toast({
+    title: 'Location created',
+    description: `${type === 'godown' ? 'Godown' : 'Collection point'} ${name} has been created`,
+  });
+  
   return { success: true, data, error: null };
 }
 
 // Collections helpers
 export async function createCollection(
   location_id: number,
-  collected_by: string,
-  material_type: string,
+  material: string,
   quantity: number,
   unit: string,
   amount_paid: number,
   notes?: string
 ) {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    toast({
+      title: 'Authentication required',
+      description: 'You must be logged in to record collections',
+      variant: 'destructive',
+    });
+    return { success: false, error: { message: 'Authentication required' } };
+  }
+  
   const { data, error } = await supabase
     .from('collections')
     .insert({
       location_id,
-      collected_by,
-      material_type,
+      collected_by: user.id,
+      material,
       quantity,
       unit,
       amount_paid,
       notes,
-      collection_date: new Date().toISOString(),
     })
     .select()
     .single();
@@ -191,6 +225,34 @@ export async function createCollection(
       variant: 'destructive',
     });
     return { success: false, error };
+  }
+  
+  toast({
+    title: 'Collection recorded',
+    description: `${quantity} ${unit} of ${material} collected`,
+  });
+  
+  // Update inventory for the corresponding godown
+  const { data: locationData } = await supabase
+    .from('locations')
+    .select('id, type')
+    .eq('id', location_id)
+    .single();
+    
+  if (locationData?.type === 'collection_point') {
+    // Find the closest godown (for simplicity, just get the first godown)
+    const { data: godowns } = await supabase
+      .from('locations')
+      .select('id')
+      .eq('type', 'godown')
+      .limit(1);
+      
+    if (godowns && godowns.length > 0) {
+      await updateInventory(godowns[0].id, material, quantity, 'add');
+    }
+  } else {
+    // Collection was at godown, directly update its inventory
+    await updateInventory(location_id, material, quantity, 'add');
   }
   
   return { success: true, data, error: null };
@@ -238,7 +300,7 @@ export async function getInventoryByGodown(godownId: number) {
 
 export async function updateInventory(
   godownId: number, 
-  materialType: string, 
+  material: string, 
   quantity: number, 
   operation: 'add' | 'subtract'
 ) {
@@ -247,10 +309,10 @@ export async function updateInventory(
     .from('inventory')
     .select('*')
     .eq('godown_id', godownId)
-    .eq('material_type', materialType)
-    .single();
+    .eq('material', material)
+    .maybeSingle();
     
-  if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+  if (fetchError) {
     console.error('Error checking inventory:', fetchError);
     return { success: false, error: fetchError };
   }
@@ -264,6 +326,11 @@ export async function updateInventory(
       : existing.quantity - quantity;
       
     if (newQuantity < 0) {
+      toast({
+        title: 'Insufficient inventory',
+        description: 'Not enough inventory for this operation',
+        variant: 'destructive',
+      });
       return { 
         success: false, 
         error: { message: 'Insufficient inventory for this operation' } 
@@ -285,9 +352,8 @@ export async function updateInventory(
       .from('inventory')
       .insert({
         godown_id: godownId,
-        material_type: materialType,
+        material,
         quantity,
-        last_updated: new Date().toISOString()
       });
       
     if (insertError) {
@@ -296,6 +362,11 @@ export async function updateInventory(
     }
   } else {
     // Trying to subtract from non-existent inventory
+    toast({
+      title: 'Inventory error',
+      description: 'Cannot subtract from non-existent inventory',
+      variant: 'destructive',
+    });
     return { 
       success: false, 
       error: { message: 'Cannot subtract from non-existent inventory' } 
@@ -305,11 +376,110 @@ export async function updateInventory(
   return { success: true, error: null };
 }
 
+// Stock transfers
+export async function transferStock(
+  fromGodownId: number,
+  toGodownId: number,
+  material: string,
+  quantity: number,
+  notes?: string
+) {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    toast({
+      title: 'Authentication required',
+      description: 'You must be logged in to transfer stock',
+      variant: 'destructive',
+    });
+    return { success: false, error: { message: 'Authentication required' } };
+  }
+  
+  // First subtract from source godown
+  const sourceUpdate = await updateInventory(
+    fromGodownId,
+    material,
+    quantity,
+    'subtract'
+  );
+  
+  if (!sourceUpdate.success) {
+    return sourceUpdate;
+  }
+  
+  // Add to destination godown
+  const destUpdate = await updateInventory(
+    toGodownId,
+    material,
+    quantity,
+    'add'
+  );
+  
+  if (!destUpdate.success) {
+    // Revert the source update
+    await updateInventory(
+      fromGodownId,
+      material,
+      quantity,
+      'add'
+    );
+    return destUpdate;
+  }
+  
+  // Record the transfer
+  const { data, error } = await supabase
+    .from('stock_transfers')
+    .insert({
+      from_godown_id: fromGodownId,
+      to_godown_id: toGodownId,
+      material,
+      quantity,
+      transferred_by: user.id,
+      notes,
+    })
+    .select()
+    .single();
+    
+  if (error) {
+    console.error('Error recording transfer:', error);
+    
+    // Attempt to revert both inventory changes
+    await updateInventory(
+      fromGodownId,
+      material,
+      quantity,
+      'add'
+    );
+    
+    await updateInventory(
+      toGodownId,
+      material,
+      quantity,
+      'subtract'
+    );
+    
+    toast({
+      title: 'Transfer failed',
+      description: error.message,
+      variant: 'destructive',
+    });
+    
+    return { success: false, error };
+  }
+  
+  toast({
+    title: 'Stock transferred',
+    description: `${quantity} units of ${material} transferred successfully`,
+  });
+  
+  return { success: true, data, error: null };
+}
+
 // Sales helpers
 export async function recordSale(
   godownId: number,
   buyerName: string,
-  materialType: string,
+  material: string,
   quantity: number,
   unit: string,
   saleAmount: number,
@@ -320,7 +490,7 @@ export async function recordSale(
   // First update inventory
   const inventoryUpdate = await updateInventory(
     godownId,
-    materialType,
+    material,
     quantity,
     'subtract'
   );
@@ -335,14 +505,13 @@ export async function recordSale(
     .insert({
       godown_id: godownId,
       buyer_name: buyerName,
-      material_type: materialType,
+      material,
       quantity,
       unit,
       sale_amount: saleAmount,
       payment_status: paymentStatus,
       amount_due: amountDue,
       notes,
-      sale_date: new Date().toISOString()
     })
     .select()
     .single();
@@ -353,123 +522,24 @@ export async function recordSale(
     // Revert inventory change
     await updateInventory(
       godownId,
-      materialType,
+      material,
       quantity,
       'add'
     );
+    
+    toast({
+      title: 'Sale recording failed',
+      description: error.message,
+      variant: 'destructive',
+    });
     
     return { success: false, error };
   }
   
-  return { success: true, data, error: null };
-}
-
-export async function getSales(startDate?: string, endDate?: string) {
-  let query = supabase
-    .from('sales')
-    .select(`
-      *,
-      godown:locations(name, district)
-    `)
-    .order('sale_date', { ascending: false });
-    
-  if (startDate) {
-    const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
-    query = query.gte('sale_date', start.toISOString());
-  }
-  
-  if (endDate) {
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
-    query = query.lte('sale_date', end.toISOString());
-  }
-  
-  const { data, error } = await query;
-  
-  if (error) {
-    console.error('Error fetching sales:', error);
-    return [];
-  }
-  
-  return data;
-}
-
-// Stock transfers
-export async function transferStock(
-  fromGodownId: number,
-  toGodownId: number,
-  materialType: string,
-  quantity: number,
-  transferredBy: string,
-  notes?: string
-) {
-  // First subtract from source godown
-  const sourceUpdate = await updateInventory(
-    fromGodownId,
-    materialType,
-    quantity,
-    'subtract'
-  );
-  
-  if (!sourceUpdate.success) {
-    return sourceUpdate;
-  }
-  
-  // Add to destination godown
-  const destUpdate = await updateInventory(
-    toGodownId,
-    materialType,
-    quantity,
-    'add'
-  );
-  
-  if (!destUpdate.success) {
-    // Revert the source update
-    await updateInventory(
-      fromGodownId,
-      materialType,
-      quantity,
-      'add'
-    );
-    return destUpdate;
-  }
-  
-  // Record the transfer
-  const { data, error } = await supabase
-    .from('stock_transfers')
-    .insert({
-      from_godown_id: fromGodownId,
-      to_godown_id: toGodownId,
-      material_type: materialType,
-      quantity,
-      transferred_by: transferredBy,
-      notes,
-      transfer_date: new Date().toISOString()
-    })
-    .select()
-    .single();
-    
-  if (error) {
-    console.error('Error recording transfer:', error);
-    
-    // Attempt to revert both inventory changes
-    await updateInventory(
-      fromGodownId,
-      materialType,
-      quantity,
-      'add'
-    );
-    
-    await updateInventory(
-      toGodownId,
-      materialType,
-      quantity,
-      'subtract'
-    );
-    
-    return { success: false, error };
-  }
+  toast({
+    title: 'Sale recorded',
+    description: `Sale of ${quantity} ${unit} of ${material} to ${buyerName} recorded`,
+  });
   
   return { success: true, data, error: null };
 }
@@ -478,64 +548,50 @@ export async function transferStock(
 export async function recordExpense(
   category: string,
   amount: number,
-  paidBy: string,
   paidTo: string,
   locationId?: number,
   notes?: string
 ) {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    toast({
+      title: 'Authentication required',
+      description: 'You must be logged in to record expenses',
+      variant: 'destructive',
+    });
+    return { success: false, error: { message: 'Authentication required' } };
+  }
+  
   const { data, error } = await supabase
     .from('expenses')
     .insert({
       category,
       amount,
-      paid_by: paidBy,
+      paid_by: user.id,
       paid_to: paidTo,
       location_id: locationId,
       notes,
-      expense_date: new Date().toISOString()
     })
     .select()
     .single();
     
   if (error) {
     console.error('Error recording expense:', error);
+    
+    toast({
+      title: 'Expense recording failed',
+      description: error.message,
+      variant: 'destructive',
+    });
+    
     return { success: false, error };
   }
   
+  toast({
+    title: 'Expense recorded',
+    description: `Expense of ${amount} for ${category} recorded`,
+  });
+  
   return { success: true, data, error: null };
-}
-
-export async function getExpenses(startDate?: string, endDate?: string, category?: string) {
-  let query = supabase
-    .from('expenses')
-    .select(`
-      *,
-      location:locations(name, district, type)
-    `)
-    .order('expense_date', { ascending: false });
-    
-  if (startDate) {
-    const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
-    query = query.gte('expense_date', start.toISOString());
-  }
-  
-  if (endDate) {
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
-    query = query.lte('expense_date', end.toISOString());
-  }
-  
-  if (category) {
-    query = query.eq('category', category);
-  }
-  
-  const { data, error } = await query;
-  
-  if (error) {
-    console.error('Error fetching expenses:', error);
-    return [];
-  }
-  
-  return data;
 }
