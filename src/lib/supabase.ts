@@ -78,7 +78,7 @@ export async function createManager(email: string, password: string, firstName: 
     email,
     password,
     email_confirm: true,
-    data: {
+    user_metadata: {
       first_name: firstName,
       last_name: lastName,
       role: 'manager'

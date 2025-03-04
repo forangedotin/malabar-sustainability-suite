@@ -2,11 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, getCurrentUser, getUserRole, getProfile } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
-
-type User = {
-  id: string;
-  email: string;
-};
+import { User } from '@supabase/supabase-js';
 
 type Profile = {
   id: string;
@@ -39,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       try {
         const currentUser = await getCurrentUser();
-        setUser(currentUser || null);
+        setUser(currentUser);
 
         if (currentUser) {
           const userRole = await getUserRole();
@@ -80,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const { user: authUser, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -94,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false };
       }
 
-      setUser(authUser);
+      setUser(data.user);
       
       const userRole = await getUserRole();
       setRole(userRole);
