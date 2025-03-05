@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { getVehicles, createVehicle, getLocations, updateVehicleStatus } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
 
 type VehicleType = 'truck' | 'pickup' | 'van' | 'auto' | 'other';
 type VehicleStatus = 'available' | 'maintenance' | 'on_route' | 'loading' | 'unloading';
@@ -59,6 +60,7 @@ const statusColors = {
 
 const VehiclesPage = () => {
   const { profile } = useAuth();
+  const { toast } = useToast();
   const [vehicles, setVehicles] = useState([]);
   const [locations, setLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,14 +81,33 @@ const VehiclesPage = () => {
 
   const fetchVehicles = async () => {
     setIsLoading(true);
-    const vehiclesData = await getVehicles();
-    setVehicles(vehiclesData || []);
-    setIsLoading(false);
+    try {
+      const vehiclesData = await getVehicles();
+      setVehicles(vehiclesData || []);
+    } catch (error) {
+      console.error("Error fetching vehicles:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load vehicles. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fetchLocations = async () => {
-    const locationsData = await getLocations();
-    setLocations(locationsData || []);
+    try {
+      const locationsData = await getLocations();
+      setLocations(locationsData || []);
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load locations. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   useEffect(() => {
@@ -97,19 +118,34 @@ const VehiclesPage = () => {
   const handleAddVehicle = async (e) => {
     e.preventDefault();
     
-    const result = await createVehicle(
-      regNumber,
-      vehicleType,
-      capacity ? Number(capacity) : undefined,
-      capacityUnit,
-      locationId ? Number(locationId) : undefined,
-      notes
-    );
-    
-    if (result.success) {
-      setOpenAddVehicle(false);
-      resetVehicleForm();
-      fetchVehicles();
+    try {
+      const result = await createVehicle(
+        regNumber,
+        vehicleType,
+        capacity ? Number(capacity) : undefined,
+        capacityUnit,
+        locationId ? Number(locationId) : undefined,
+        notes
+      );
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Vehicle added successfully",
+        });
+        setOpenAddVehicle(false);
+        resetVehicleForm();
+        fetchVehicles();
+      } else {
+        throw new Error(result.error || "Failed to add vehicle");
+      }
+    } catch (error) {
+      console.error("Error adding vehicle:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add vehicle. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -118,17 +154,32 @@ const VehiclesPage = () => {
     
     if (!selectedVehicle) return;
     
-    const result = await updateVehicleStatus(
-      selectedVehicle.id,
-      newStatus,
-      newLocationId ? Number(newLocationId) : undefined
-    );
-    
-    if (result.success) {
-      setOpenUpdateStatus(false);
-      setNewStatus('available');
-      setNewLocationId('');
-      fetchVehicles();
+    try {
+      const result = await updateVehicleStatus(
+        selectedVehicle.id,
+        newStatus,
+        newLocationId ? Number(newLocationId) : undefined
+      );
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Vehicle status updated successfully",
+        });
+        setOpenUpdateStatus(false);
+        setNewStatus('available');
+        setNewLocationId('');
+        fetchVehicles();
+      } else {
+        throw new Error(result.error || "Failed to update vehicle status");
+      }
+    } catch (error) {
+      console.error("Error updating vehicle status:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update vehicle status. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -200,7 +251,7 @@ const VehiclesPage = () => {
                       </Label>
                       <Select
                         value={vehicleType}
-                        onValueChange={(value: VehicleType) => setVehicleType(value)}
+                        onValueChange={(value) => setVehicleType(value as VehicleType)}
                         required
                       >
                         <SelectTrigger className="col-span-4">
@@ -398,7 +449,7 @@ const VehiclesPage = () => {
                   </Label>
                   <Select
                     value={newStatus}
-                    onValueChange={(value: VehicleStatus) => setNewStatus(value)}
+                    onValueChange={(value) => setNewStatus(value as VehicleStatus)}
                     required
                   >
                     <SelectTrigger className="col-span-4">
