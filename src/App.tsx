@@ -11,6 +11,9 @@ import TripsPage from './pages/trips/TripsPage';
 import TokenLookupPage from './pages/token/TokenLookupPage';
 import LocationsPage from './pages/locations/LocationsPage';
 import CollectionsPage from './pages/collections/CollectionsPage';
+import InventoryPage from './pages/inventory/InventoryPage';
+import SalesPage from './pages/sales/SalesPage';
+import ExpensesPage from './pages/expenses/ExpensesPage';
 
 function App() {
   return (
@@ -44,6 +47,36 @@ function App() {
             element={
               <ProtectedRoute>
                 <CollectionsPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Inventory Management Route */}
+          <Route
+            path="/inventory"
+            element={
+              <ProtectedRoute>
+                <InventoryPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Sales Management Route */}
+          <Route
+            path="/sales"
+            element={
+              <ProtectedRoute>
+                <SalesPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Expenses Management Route */}
+          <Route
+            path="/expenses"
+            element={
+              <ProtectedRoute>
+                <ExpensesPage />
               </ProtectedRoute>
             }
           />
