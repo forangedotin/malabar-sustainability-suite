@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,8 +47,9 @@ import { Badge } from '@/components/ui/badge';
 import { getTrips, createTrip, completeTrip, getVehicles, getDrivers, getLocations } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 
-// Define the material types enum to match the database enum
-const materialTypes = [
+type MaterialType = 'mixed_plastic' | 'paper' | 'cardboard' | 'metal' | 'glass' | 'organic' | 'electronic' | 'other';
+
+const materialTypes: MaterialType[] = [
   'mixed_plastic',
   'paper',
   'cardboard',
@@ -58,9 +58,7 @@ const materialTypes = [
   'organic',
   'electronic',
   'other'
-] as const;
-
-type MaterialType = typeof materialTypes[number];
+];
 
 const TripsPage = () => {
   const [trips, setTrips] = useState([]);
@@ -69,7 +67,6 @@ const TripsPage = () => {
   const [openAddTrip, setOpenAddTrip] = useState(false);
   const { toast } = useToast();
   
-  // Form states
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -143,7 +140,7 @@ const TripsPage = () => {
         Number(selectedDriverId),
         Number(fromLocationId),
         Number(toLocationId),
-        material, // This is now a valid enum type
+        material as MaterialType,
         Number(quantity),
         unit,
         notes
@@ -234,7 +231,6 @@ const TripsPage = () => {
     }
   };
 
-  // Format the material type for display
   const formatMaterialType = (type: string) => {
     return type?.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   };

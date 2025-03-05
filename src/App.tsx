@@ -10,6 +10,7 @@ import DriversPage from './pages/drivers/DriversPage';
 import TripsPage from './pages/trips/TripsPage';
 import TokenLookupPage from './pages/token/TokenLookupPage';
 import LocationsPage from './pages/locations/LocationsPage';
+import CollectionsPage from './pages/collections/CollectionsPage';
 
 function App() {
   return (
@@ -37,7 +38,15 @@ function App() {
             }
           />
           
-          {/* Collections, Inventory, Sales, Expenses routes will be added when those components are created */}
+          {/* Collections Management Route */}
+          <Route
+            path="/collections"
+            element={
+              <ProtectedRoute>
+                <CollectionsPage />
+              </ProtectedRoute>
+            }
+          />
           
           {/* Vehicle Management Routes */}
           <Route
