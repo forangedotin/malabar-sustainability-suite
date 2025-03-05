@@ -63,8 +63,9 @@ const StatusUpdateForm: React.FC<StatusUpdateFormProps> = ({
     if (!vehicle) return;
     
     try {
+      // Convert the vehicle.id from string to number before passing to updateVehicleStatus
       const result = await updateVehicleStatus(
-        vehicle.id,
+        Number(vehicle.id),
         newStatus,
         newLocationId ? Number(newLocationId) : undefined
       );
