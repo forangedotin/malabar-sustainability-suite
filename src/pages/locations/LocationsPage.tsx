@@ -1,9 +1,17 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -14,331 +22,307 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { createLocation, getLocations } from '@/lib/supabase';
-import { useAuth } from '@/contexts/auth';
-import { Loader2, MapPin, Plus } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Search,
+  Plus,
+  RefreshCw,
+  MapPin,
+  Building,
+  Loader2,
+  Phone
+} from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-
-interface Location {
-  id: number;
-  name: string;
-  type: 'godown' | 'collection_point';
-  address: string;
-  district: string;
-  contact_phone?: string;
-  created_at: string;
-}
+import { getLocations, createLocation } from '@/lib/supabase';
 
 const LocationsPage = () => {
-  const [locations, setLocations] = useState<Location[]>([]);
+  const [locations, setLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('all');
-  const { isAdmin } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [openAddLocation, setOpenAddLocation] = useState(false);
   const { toast } = useToast();
-
-  // Form state
-  const [formState, setFormState] = useState({
-    name: '',
-    type: 'godown' as 'godown' | 'collection_point',
-    address: '',
-    district: '',
-    contactPhone: '',
-  });
-
-  const districts = [
-    'Alappuzha',
-    'Ernakulam',
-    'Idukki',
-    'Kannur',
-    'Kasaragod',
-    'Kollam',
-    'Kottayam',
-    'Kozhikode',
-    'Malappuram',
-    'Palakkad',
-    'Pathanamthitta',
-    'Thiruvananthapuram',
-    'Thrissur',
-    'Wayanad',
-  ];
-
-  useEffect(() => {
-    fetchLocations();
-  }, [activeTab]);
+  
+  // Form states
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [district, setDistrict] = useState('');
+  const [type, setType] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
 
   const fetchLocations = async () => {
     setIsLoading(true);
     try {
-      let fetchedLocations;
-      
-      if (activeTab === 'godowns') {
-        fetchedLocations = await getLocations('godown');
-      } else if (activeTab === 'collection_points') {
-        fetchedLocations = await getLocations('collection_point');
-      } else {
-        fetchedLocations = await getLocations();
-      }
-      
-      setLocations(fetchedLocations);
+      const locationsData = await getLocations();
+      setLocations(locationsData || []);
     } catch (error) {
       console.error('Error fetching locations:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load locations',
-        variant: 'destructive',
+        title: 'Failed to load locations',
+        description: 'Please try again later.',
+        variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormState((prev) => ({ ...prev, [name]: value }));
-  };
+  useEffect(() => {
+    fetchLocations();
+  }, []);
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormState((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAddLocation = async (e) => {
     e.preventDefault();
     
-    const { name, type, address, district, contactPhone } = formState;
+    if (!name || !address || !district || !type) {
+      toast({
+        title: 'Missing information',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive'
+      });
+      return;
+    }
     
-    const result = await createLocation(name, address, district, type, contactPhone);
-    
-    if (result.success) {
-      setIsDialogOpen(false);
-      fetchLocations();
-      resetForm();
+    try {
+      const result = await createLocation(
+        name,
+        address,
+        district,
+        type as 'godown' | 'collection_point',
+        contactPhone || undefined
+      );
+      
+      if (result.success) {
+        setOpenAddLocation(false);
+        resetForm();
+        fetchLocations();
+        toast({
+          title: 'Location created',
+          description: `${name} has been added successfully.`
+        });
+      }
+    } catch (error) {
+      console.error('Error creating location:', error);
+      toast({
+        title: 'Failed to create location',
+        description: 'Please try again later.',
+        variant: 'destructive'
+      });
     }
   };
 
   const resetForm = () => {
-    setFormState({
-      name: '',
-      type: 'godown',
-      address: '',
-      district: '',
-      contactPhone: '',
-    });
+    setName('');
+    setAddress('');
+    setDistrict('');
+    setType('');
+    setContactPhone('');
   };
 
-  const getLocationTypeDisplay = (type: string) => {
+  const filteredLocations = locations.filter(location => 
+    location.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    location.district?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    location.type?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const getLocationTypeLabel = (type) => {
     return type === 'godown' ? 'Godown' : 'Collection Point';
   };
 
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Locations</h1>
             <p className="text-muted-foreground">
-              Manage your godowns and collection points across Kerala
+              Manage godowns and collection points
             </p>
           </div>
-          {isAdmin && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <div className="mt-4 sm:mt-0">
+            <Dialog open={openAddLocation} onOpenChange={setOpenAddLocation}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Location
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <form onSubmit={handleSubmit}>
+              <DialogContent className="sm:max-w-[550px]">
+                <form onSubmit={handleAddLocation}>
                   <DialogHeader>
                     <DialogTitle>Add New Location</DialogTitle>
                     <DialogDescription>
-                      Fill in the details for the new location
+                      Enter details to add a new godown or collection point.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Location Name</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        placeholder="Enter location name"
-                        value={formState.name}
-                        onChange={handleInputChange}
-                        required
-                      />
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Location Name</Label>
+                        <Input
+                          id="name"
+                          placeholder="Enter location name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="type">Location Type</Label>
-                      <Select
-                        value={formState.type}
-                        onValueChange={(value) => handleSelectChange('type', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select location type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="godown">Godown</SelectItem>
-                          <SelectItem value="collection_point">Collection Point</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="district">District</Label>
+                        <Input
+                          id="district"
+                          placeholder="Enter district"
+                          value={district}
+                          onChange={(e) => setDistrict(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="type">Location Type</Label>
+                        <Select
+                          value={type}
+                          onValueChange={setType}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="godown">Godown</SelectItem>
+                            <SelectItem value="collection_point">Collection Point</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="address">Address</Label>
-                      <Input
+                      <Textarea
                         id="address"
-                        name="address"
                         placeholder="Enter full address"
-                        value={formState.address}
-                        onChange={handleInputChange}
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="district">District</Label>
-                      <Select
-                        value={formState.district}
-                        onValueChange={(value) => handleSelectChange('district', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select district" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {districts.map((district) => (
-                            <SelectItem key={district} value={district}>
-                              {district}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="contactPhone">Contact Phone (Optional)</Label>
+                      <Label htmlFor="contact_phone">Contact Phone (Optional)</Label>
                       <Input
-                        id="contactPhone"
-                        name="contactPhone"
-                        placeholder="Enter contact phone"
-                        value={formState.contactPhone}
-                        onChange={handleInputChange}
+                        id="contact_phone"
+                        placeholder="Enter contact phone number"
+                        value={contactPhone}
+                        onChange={(e) => setContactPhone(e.target.value)}
                       />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="submit">Add Location</Button>
+                    <Button variant="outline" type="button" onClick={() => setOpenAddLocation(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">Save Location</Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
-          )}
+          </div>
         </div>
 
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="godowns">Godowns</TabsTrigger>
-            <TabsTrigger value="collection_points">Collection Points</TabsTrigger>
-          </TabsList>
-          <TabsContent value="all" className="mt-6">
-            {renderLocations()}
-          </TabsContent>
-          <TabsContent value="godowns" className="mt-6">
-            {renderLocations()}
-          </TabsContent>
-          <TabsContent value="collection_points" className="mt-6">
-            {renderLocations()}
-          </TabsContent>
-        </Tabs>
+        <div className="flex w-full items-center space-x-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search locations by name, district or type..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1"
+          />
+          <Button variant="outline" size="icon" onClick={fetchLocations}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>All Locations</CardTitle>
+            <CardDescription>
+              {locations.length} locations registered in the system
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredLocations.length > 0 ? (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>District</TableHead>
+                      <TableHead>Address</TableHead>
+                      <TableHead>Contact</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLocations.map((location) => (
+                      <TableRow key={location.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-primary" />
+                            {location.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4" />
+                            {getLocationTypeLabel(location.type)}
+                          </div>
+                        </TableCell>
+                        <TableCell>{location.district}</TableCell>
+                        <TableCell className="max-w-xs truncate">{location.address}</TableCell>
+                        <TableCell>
+                          {location.contact_phone ? (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {location.contact_phone}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Not provided</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <MapPin className="h-10 w-10 text-muted-foreground" />
+                <h3 className="mt-2 text-lg font-semibold">No locations found</h3>
+                {searchQuery ? (
+                  <p className="text-muted-foreground">
+                    No results for "{searchQuery}". Try another search term.
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    No locations have been added yet. Add your first location to get started.
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
-
-  function renderLocations() {
-    if (isLoading) {
-      return (
-        <div className="flex h-40 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      );
-    }
-
-    if (locations.length === 0) {
-      return (
-        <div className="flex h-40 flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-          <MapPin className="h-10 w-10 text-muted-foreground/80" />
-          <h3 className="mt-4 text-lg font-semibold">No locations found</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {isAdmin
-              ? "You haven't added any locations yet. Add your first location to get started."
-              : "There are no locations in this category yet."}
-          </p>
-          {isAdmin && (
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => setIsDialogOpen(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Location
-            </Button>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {locations.map((location) => (
-          <Card key={location.id}>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                {location.name}
-              </CardTitle>
-              <CardDescription>
-                {getLocationTypeDisplay(location.type)} · {location.district}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm">
-                <div className="font-medium">Address</div>
-                <div className="text-muted-foreground">{location.address}</div>
-                {location.contact_phone && (
-                  <>
-                    <div className="mt-2 font-medium">Contact</div>
-                    <div className="text-muted-foreground">{location.contact_phone}</div>
-                  </>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button variant="outline" size="sm">
-                View Details
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
-    );
-  }
 };
 
 export default LocationsPage;

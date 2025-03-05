@@ -9,6 +9,7 @@ import VehiclesPage from './pages/vehicles/VehiclesPage';
 import DriversPage from './pages/drivers/DriversPage';
 import TripsPage from './pages/trips/TripsPage';
 import TokenLookupPage from './pages/token/TokenLookupPage';
+import LocationsPage from './pages/locations/LocationsPage';
 
 function App() {
   return (
@@ -25,6 +26,18 @@ function App() {
               </ProtectedRoute>
             }
           />
+          
+          {/* Location Management Routes */}
+          <Route
+            path="/locations"
+            element={
+              <ProtectedRoute>
+                <LocationsPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Collections, Inventory, Sales, Expenses routes will be added when those components are created */}
           
           {/* Vehicle Management Routes */}
           <Route
@@ -65,6 +78,9 @@ function App() {
           
           {/* Redirect root to dashboard or login */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          
+          {/* Add a catch-all route for unknown paths */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>
       <Toaster />

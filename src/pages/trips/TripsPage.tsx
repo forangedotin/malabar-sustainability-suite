@@ -46,12 +46,28 @@ import {
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { getTrips, createTrip, completeTrip, getVehicles, getDrivers, getLocations } from '@/lib/supabase';
+import { useToast } from '@/components/ui/use-toast';
+
+// Define the material types enum to match the database enum
+const materialTypes = [
+  'mixed_plastic',
+  'paper',
+  'cardboard',
+  'metal',
+  'glass',
+  'organic',
+  'electronic',
+  'other'
+] as const;
+
+type MaterialType = typeof materialTypes[number];
 
 const TripsPage = () => {
   const [trips, setTrips] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [openAddTrip, setOpenAddTrip] = useState(false);
+  const { toast } = useToast();
   
   // Form states
   const [vehicles, setVehicles] = useState([]);
@@ -61,7 +77,7 @@ const TripsPage = () => {
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [fromLocationId, setFromLocationId] = useState('');
   const [toLocationId, setToLocationId] = useState('');
-  const [material, setMaterial] = useState('');
+  const [material, setMaterial] = useState<MaterialType>('mixed_plastic');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('');
   const [notes, setNotes] = useState('');
@@ -73,21 +89,35 @@ const TripsPage = () => {
       setTrips(tripsData || []);
     } catch (error) {
       console.error('Error fetching trips:', error);
+      toast({
+        title: 'Failed to fetch trips',
+        description: 'Could not load trip data. Please try again.',
+        variant: 'destructive'
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const fetchFormData = async () => {
-    const [vehiclesData, driversData, locationsData] = await Promise.all([
-      getVehicles(),
-      getDrivers(),
-      getLocations()
-    ]);
-    
-    setVehicles(vehiclesData || []);
-    setDrivers(driversData || []);
-    setLocations(locationsData || []);
+    try {
+      const [vehiclesData, driversData, locationsData] = await Promise.all([
+        getVehicles(),
+        getDrivers(),
+        getLocations()
+      ]);
+      
+      setVehicles(vehiclesData || []);
+      setDrivers(driversData || []);
+      setLocations(locationsData || []);
+    } catch (error) {
+      console.error('Error fetching form data:', error);
+      toast({
+        title: 'Data loading error',
+        description: 'Could not load necessary data for the form.',
+        variant: 'destructive'
+      });
+    }
   };
 
   useEffect(() => {
@@ -99,38 +129,69 @@ const TripsPage = () => {
     e.preventDefault();
     
     if (!selectedVehicleId || !selectedDriverId || !fromLocationId || !toLocationId || !material || !quantity || !unit) {
+      toast({
+        title: 'Missing information',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive'
+      });
       return;
     }
     
-    const result = await createTrip(
-      Number(selectedVehicleId),
-      Number(selectedDriverId),
-      Number(fromLocationId),
-      Number(toLocationId),
-      material,
-      Number(quantity),
-      unit,
-      notes
-    );
-    
-    if (result.success) {
-      setOpenAddTrip(false);
-      resetForm();
-      fetchTrips();
+    try {
+      const result = await createTrip(
+        Number(selectedVehicleId),
+        Number(selectedDriverId),
+        Number(fromLocationId),
+        Number(toLocationId),
+        material, // This is now a valid enum type
+        Number(quantity),
+        unit,
+        notes
+      );
+      
+      if (result.success) {
+        setOpenAddTrip(false);
+        resetForm();
+        fetchTrips();
+        toast({
+          title: 'Trip created',
+          description: 'The trip has been recorded successfully.'
+        });
+      }
+    } catch (error) {
+      console.error('Error creating trip:', error);
+      toast({
+        title: 'Failed to create trip',
+        description: 'Please try again later.',
+        variant: 'destructive'
+      });
     }
   };
 
   const handleCompleteTrip = async (trip) => {
     if (trip.status === 'completed') return;
     
-    const result = await completeTrip(
-      trip.id,
-      trip.vehicle_id,
-      trip.to_location_id
-    );
-    
-    if (result.success) {
-      fetchTrips();
+    try {
+      const result = await completeTrip(
+        trip.id,
+        trip.vehicle_id,
+        trip.to_location_id
+      );
+      
+      if (result.success) {
+        fetchTrips();
+        toast({
+          title: 'Trip completed',
+          description: 'The trip has been marked as completed.'
+        });
+      }
+    } catch (error) {
+      console.error('Error completing trip:', error);
+      toast({
+        title: 'Failed to complete trip',
+        description: 'Please try again later.',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -139,7 +200,7 @@ const TripsPage = () => {
     setSelectedDriverId('');
     setFromLocationId('');
     setToLocationId('');
-    setMaterial('');
+    setMaterial('mixed_plastic');
     setQuantity('');
     setUnit('');
     setNotes('');
@@ -171,6 +232,11 @@ const TripsPage = () => {
     } catch (error) {
       return 'Invalid date';
     }
+  };
+
+  // Format the material type for display
+  const formatMaterialType = (type: string) => {
+    return type?.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   return (
@@ -285,13 +351,22 @@ const TripsPage = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="material">Material</Label>
-                        <Input
-                          id="material"
-                          placeholder="E.g., Mixed Plastics, Paper"
+                        <Select
                           value={material}
-                          onChange={(e) => setMaterial(e.target.value)}
+                          onValueChange={(value) => setMaterial(value as MaterialType)}
                           required
-                        />
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select material" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {materialTypes.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {formatMaterialType(type)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-2">
@@ -400,7 +475,7 @@ const TripsPage = () => {
                             {trip.to_location?.name}
                           </div>
                         </TableCell>
-                        <TableCell>{trip.material_carried}</TableCell>
+                        <TableCell>{formatMaterialType(trip.material_carried)}</TableCell>
                         <TableCell>
                           {trip.quantity} {trip.unit}
                         </TableCell>
