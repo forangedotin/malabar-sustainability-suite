@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import Layout from '@/components/Layout';
@@ -397,7 +398,7 @@ const VehiclesPage = () => {
                   </Label>
                   <Select
                     value={newStatus}
-                    onValueChange={setNewStatus}
+                    onValueChange={(value: VehicleStatus) => setNewStatus(value)}
                     required
                   >
                     <SelectTrigger className="col-span-4">

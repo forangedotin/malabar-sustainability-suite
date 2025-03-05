@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -29,6 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { useToast } from '@/components/ui/use-toast';
 
 interface NavItemProps {
   to: string;
@@ -65,10 +67,24 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/login');
+    try {
+      await signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out of your account.",
+      });
+      navigate('/login');
+    } catch (error) {
+      console.error("Sign out error:", error);
+      toast({
+        title: "Sign out failed",
+        description: "There was a problem signing out. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const toggleSidebar = () => {

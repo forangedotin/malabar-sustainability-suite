@@ -1,5 +1,5 @@
+
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/auth';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,83 +31,80 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Route,
   Search,
   Plus,
   RefreshCw,
-  Truck,
-  Loader2,
+  Car,
   User,
-  ArrowRightLeft,
-  Check,
-  Clock,
-  Package
+  MapPin,
+  Loader2,
+  Route,
+  ArrowRight,
+  Calendar,
+  CheckCircle
 } from 'lucide-react';
-import { 
-  getTrips, 
-  createTrip, 
-  completeTrip, 
-  getVehicles, 
-  getDrivers, 
-  getLocations 
-} from '@/lib/supabase';
-import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { getTrips, createTrip, completeTrip, getVehicles, getDrivers, getLocations } from '@/lib/supabase';
 
 const TripsPage = () => {
-  const { profile } = useAuth();
   const [trips, setTrips] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
-  const [drivers, setDrivers] = useState([]);
-  const [locations, setLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [openAddTrip, setOpenAddTrip] = useState(false);
   
-  const [vehicleId, setVehicleId] = useState('');
-  const [driverId, setDriverId] = useState('');
+  // Form states
+  const [vehicles, setVehicles] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState('');
+  const [selectedDriverId, setSelectedDriverId] = useState('');
   const [fromLocationId, setFromLocationId] = useState('');
   const [toLocationId, setToLocationId] = useState('');
   const [material, setMaterial] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('');
   const [notes, setNotes] = useState('');
-  
+
   const fetchTrips = async () => {
     setIsLoading(true);
-    const tripsData = await getTrips();
-    setTrips(tripsData || []);
-    setIsLoading(false);
+    try {
+      const tripsData = await getTrips();
+      setTrips(tripsData || []);
+    } catch (error) {
+      console.error('Error fetching trips:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const fetchVehicles = async () => {
-    const vehiclesData = await getVehicles();
+  const fetchFormData = async () => {
+    const [vehiclesData, driversData, locationsData] = await Promise.all([
+      getVehicles(),
+      getDrivers(),
+      getLocations()
+    ]);
+    
     setVehicles(vehiclesData || []);
-  };
-
-  const fetchDrivers = async () => {
-    const driversData = await getDrivers();
     setDrivers(driversData || []);
-  };
-
-  const fetchLocations = async () => {
-    const locationsData = await getLocations();
     setLocations(locationsData || []);
   };
 
   useEffect(() => {
     fetchTrips();
-    fetchVehicles();
-    fetchDrivers();
-    fetchLocations();
+    fetchFormData();
   }, []);
 
   const handleAddTrip = async (e) => {
     e.preventDefault();
     
+    if (!selectedVehicleId || !selectedDriverId || !fromLocationId || !toLocationId || !material || !quantity || !unit) {
+      return;
+    }
+    
     const result = await createTrip(
-      Number(vehicleId),
-      Number(driverId),
+      Number(selectedVehicleId),
+      Number(selectedDriverId),
       Number(fromLocationId),
       Number(toLocationId),
       material,
@@ -118,12 +115,14 @@ const TripsPage = () => {
     
     if (result.success) {
       setOpenAddTrip(false);
-      resetTripForm();
+      resetForm();
       fetchTrips();
     }
   };
 
   const handleCompleteTrip = async (trip) => {
+    if (trip.status === 'completed') return;
+    
     const result = await completeTrip(
       trip.id,
       trip.vehicle_id,
@@ -135,9 +134,9 @@ const TripsPage = () => {
     }
   };
 
-  const resetTripForm = () => {
-    setVehicleId('');
-    setDriverId('');
+  const resetForm = () => {
+    setSelectedVehicleId('');
+    setSelectedDriverId('');
     setFromLocationId('');
     setToLocationId('');
     setMaterial('');
@@ -149,10 +148,30 @@ const TripsPage = () => {
   const filteredTrips = trips.filter(trip => 
     trip.vehicle?.registration_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     trip.driver?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    trip.material_carried?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     trip.from_location?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    trip.to_location?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    trip.to_location?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    trip.material_carried?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    trip.status?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'in_progress':
+        return <Badge className="bg-blue-500">In Progress</Badge>;
+      case 'completed':
+        return <Badge className="bg-green-500">Completed</Badge>;
+      default:
+        return <Badge className="bg-gray-500">{status}</Badge>;
+    }
+  };
+
+  const formatDate = (dateString) => {
+    try {
+      return format(new Date(dateString), 'PPp');
+    } catch (error) {
+      return 'Invalid date';
+    }
+  };
 
   return (
     <Layout>
@@ -161,7 +180,7 @@ const TripsPage = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Trips</h1>
             <p className="text-muted-foreground">
-              Track and manage vehicle trips and material transport
+              Manage vehicle trips and material transport
             </p>
           </div>
           <div className="mt-4 sm:mt-0">
@@ -169,15 +188,15 @@ const TripsPage = () => {
               <DialogTrigger asChild>
                 <Button className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
-                  Record New Trip
+                  Add Trip
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[550px]">
+              <DialogContent className="sm:max-w-[600px]">
                 <form onSubmit={handleAddTrip}>
                   <DialogHeader>
                     <DialogTitle>Record New Trip</DialogTitle>
                     <DialogDescription>
-                      Enter details about the trip to track vehicle movement and material transport.
+                      Enter trip details to track vehicle movement and material transport.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
@@ -185,8 +204,8 @@ const TripsPage = () => {
                       <div className="space-y-2">
                         <Label htmlFor="vehicle">Vehicle</Label>
                         <Select
-                          value={vehicleId}
-                          onValueChange={setVehicleId}
+                          value={selectedVehicleId}
+                          onValueChange={setSelectedVehicleId}
                           required
                         >
                           <SelectTrigger>
@@ -199,27 +218,25 @@ const TripsPage = () => {
                                 <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
                                   {vehicle.registration_number} ({vehicle.type})
                                 </SelectItem>
-                            ))}
+                              ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="driver">Driver</Label>
                         <Select
-                          value={driverId}
-                          onValueChange={setDriverId}
+                          value={selectedDriverId}
+                          onValueChange={setSelectedDriverId}
                           required
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select driver" />
                           </SelectTrigger>
                           <SelectContent>
-                            {drivers
-                              .filter(d => d.is_active)
-                              .map((driver) => (
-                                <SelectItem key={driver.id} value={driver.id.toString()}>
-                                  {driver.name}
-                                </SelectItem>
+                            {drivers.map((driver) => (
+                              <SelectItem key={driver.id} value={driver.id.toString()}>
+                                {driver.name}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -265,55 +282,46 @@ const TripsPage = () => {
                         </Select>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="material">Material</Label>
-                        <Select
+                        <Input
+                          id="material"
+                          placeholder="E.g., Mixed Plastics, Paper"
                           value={material}
-                          onValueChange={setMaterial}
-                          required
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select material" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="plastic">Plastic</SelectItem>
-                            <SelectItem value="paper">Paper</SelectItem>
-                            <SelectItem value="metal">Metal</SelectItem>
-                            <SelectItem value="glass">Glass</SelectItem>
-                            <SelectItem value="e_waste">E-Waste</SelectItem>
-                            <SelectItem value="organic">Organic Waste</SelectItem>
-                            <SelectItem value="mixed">Mixed Waste</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="quantity">Quantity</Label>
-                        <Input
-                          id="quantity"
-                          type="number"
-                          placeholder="0.00"
-                          value={quantity}
-                          onChange={(e) => setQuantity(e.target.value)}
+                          onChange={(e) => setMaterial(e.target.value)}
                           required
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="unit">Unit</Label>
-                        <Input
-                          id="unit"
-                          placeholder="kg, tons, etc."
-                          value={unit}
-                          onChange={(e) => setUnit(e.target.value)}
-                          required
-                        />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="quantity">Quantity</Label>
+                          <Input
+                            id="quantity"
+                            type="number"
+                            placeholder="0.00"
+                            value={quantity}
+                            onChange={(e) => setQuantity(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="unit">Unit</Label>
+                          <Input
+                            id="unit"
+                            placeholder="kg, tons"
+                            value={unit}
+                            onChange={(e) => setUnit(e.target.value)}
+                            required
+                          />
+                        </div>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="trip-notes">Notes</Label>
+                      <Label htmlFor="notes">Notes</Label>
                       <Textarea
-                        id="trip-notes"
-                        placeholder="Any additional information about the trip"
+                        id="notes"
+                        placeholder="Additional details about the trip"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                       />
@@ -331,7 +339,7 @@ const TripsPage = () => {
         <div className="flex w-full items-center space-x-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search trips by vehicle, driver, material, or locations..."
+            placeholder="Search trips by vehicle, driver, location or material..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1"
@@ -343,9 +351,9 @@ const TripsPage = () => {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle>Recent Trips</CardTitle>
+            <CardTitle>Trip Records</CardTitle>
             <CardDescription>
-              Total recorded trips: {trips.length}
+              Total trips: {trips.length}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -362,6 +370,7 @@ const TripsPage = () => {
                       <TableHead>Driver</TableHead>
                       <TableHead>Route</TableHead>
                       <TableHead>Material</TableHead>
+                      <TableHead>Quantity</TableHead>
                       <TableHead>Departure</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
@@ -372,7 +381,7 @@ const TripsPage = () => {
                       <TableRow key={trip.id}>
                         <TableCell>
                           <div className="flex items-center">
-                            <Truck className="mr-1 h-3 w-3" />
+                            <Car className="mr-1 h-3 w-3" />
                             {trip.vehicle?.registration_number}
                           </div>
                         </TableCell>
@@ -383,41 +392,42 @@ const TripsPage = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center">
+                          <div className="flex items-center gap-1 text-xs">
+                            <MapPin className="h-3 w-3" />
                             {trip.from_location?.name}
-                            <ArrowRightLeft className="mx-1 h-3 w-3" />
+                            <ArrowRight className="h-3 w-3" />
+                            <MapPin className="h-3 w-3" />
                             {trip.to_location?.name}
                           </div>
                         </TableCell>
+                        <TableCell>{trip.material_carried}</TableCell>
                         <TableCell>
-                          <div className="flex items-center">
-                            <Package className="mr-1 h-3 w-3" />
-                            {trip.quantity} {trip.unit} of {trip.material_carried}
+                          {trip.quantity} {trip.unit}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center text-xs">
+                            <Calendar className="mr-1 h-3 w-3" />
+                            {formatDate(trip.departure_time)}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center">
-                            <Clock className="mr-1 h-3 w-3" />
-                            {format(new Date(trip.departure_time), 'dd/MM/yy HH:mm')}
-                          </div>
+                          {getStatusBadge(trip.status)}
                         </TableCell>
                         <TableCell>
-                          <Badge 
-                            className={trip.status === 'completed' ? "bg-green-500" : "bg-blue-500"}
-                          >
-                            {trip.status === 'completed' ? "Completed" : "In Progress"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {trip.status !== 'completed' && (
+                          {trip.status === 'in_progress' && (
                             <Button 
                               variant="ghost" 
                               size="sm"
                               onClick={() => handleCompleteTrip(trip)}
                             >
-                              <Check className="mr-1 h-3 w-3" />
-                              Complete Trip
+                              <CheckCircle className="mr-1 h-3 w-3" />
+                              Complete
                             </Button>
+                          )}
+                          {trip.status === 'completed' && (
+                            <span className="text-xs text-muted-foreground">
+                              Completed {trip.arrival_time ? formatDate(trip.arrival_time) : ''}
+                            </span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -435,7 +445,7 @@ const TripsPage = () => {
                   </p>
                 ) : (
                   <p className="text-muted-foreground">
-                    No trips recorded yet. Start recording vehicle trips to track movements.
+                    No trips have been recorded yet. Add your first trip to get started.
                   </p>
                 )}
               </div>
