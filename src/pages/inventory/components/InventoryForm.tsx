@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { updateInventory, getLocations } from '@/lib/supabase';
 
 interface Location {
@@ -100,11 +100,17 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ onSuccess, onCancel }) =>
         });
         onSuccess();
       } else {
-        // Fix: Extract the message string properly from the error object
-        const errorMessage = typeof result.error === 'object' && result.error !== null
-          ? result.error.message || 'Failed to update inventory'
-          : 'Failed to update inventory';
-          
+        // Fixed: Extract the error message properly
+        let errorMessage = 'Failed to update inventory';
+        
+        if (result.error) {
+          if (typeof result.error === 'object' && result.error !== null && 'message' in result.error) {
+            errorMessage = result.error.message as string;
+          } else if (typeof result.error === 'string') {
+            errorMessage = result.error;
+          }
+        }
+        
         throw new Error(errorMessage);
       }
     } catch (error) {
