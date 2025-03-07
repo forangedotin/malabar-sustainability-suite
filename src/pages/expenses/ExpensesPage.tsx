@@ -12,7 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
+import ExpenseForm from './components/ExpenseForm';
 
 interface Expense {
   id: number;
@@ -30,42 +32,58 @@ interface Expense {
 const ExpensesPage = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [openAddExpense, setOpenAddExpense] = useState(false);
+
+  const fetchExpenses = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select(`
+          *,
+          location:locations(name)
+        `)
+        .order('expense_date', { ascending: false });
+          
+      if (error) {
+        throw error;
+      }
+      
+      setExpenses(data || []);
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchExpenses = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('expenses')
-          .select(`
-            *,
-            location:locations(name)
-          `)
-          .order('expense_date', { ascending: false });
-          
-        if (error) {
-          throw error;
-        }
-        
-        setExpenses(data || []);
-      } catch (error) {
-        console.error('Error fetching expenses:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchExpenses();
   }, []);
+
+  const handleExpenseAdded = () => {
+    setOpenAddExpense(false);
+    fetchExpenses();
+  };
 
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Expense Management</h1>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Record Expense
-          </Button>
+          <Dialog open={openAddExpense} onOpenChange={setOpenAddExpense}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Record Expense
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <ExpenseForm 
+                onSuccess={handleExpenseAdded} 
+                onCancel={() => setOpenAddExpense(false)} 
+              />
+            </DialogContent>
+          </Dialog>
         </div>
 
         <Card>

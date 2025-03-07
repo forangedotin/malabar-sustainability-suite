@@ -12,7 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
+import SaleForm from './components/SaleForm';
 
 interface Sale {
   id: number;
@@ -30,30 +32,36 @@ interface Sale {
 const SalesPage = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [openAddSale, setOpenAddSale] = useState(false);
+
+  const fetchSales = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .order('sale_date', { ascending: false });
+          
+      if (error) {
+        throw error;
+      }
+      
+      setSales(data || []);
+    } catch (error) {
+      console.error('Error fetching sales:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchSales = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('sales')
-          .select('*')
-          .order('sale_date', { ascending: false });
-          
-        if (error) {
-          throw error;
-        }
-        
-        setSales(data || []);
-      } catch (error) {
-        console.error('Error fetching sales:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchSales();
   }, []);
+
+  const handleSaleAdded = () => {
+    setOpenAddSale(false);
+    fetchSales();
+  };
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -73,9 +81,19 @@ const SalesPage = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Sales Management</h1>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Record Sale
-          </Button>
+          <Dialog open={openAddSale} onOpenChange={setOpenAddSale}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Record Sale
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[550px]">
+              <SaleForm 
+                onSuccess={handleSaleAdded} 
+                onCancel={() => setOpenAddSale(false)} 
+              />
+            </DialogContent>
+          </Dialog>
         </div>
 
         <Card>

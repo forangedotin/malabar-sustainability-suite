@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, Package, Plus } from 'lucide-react';
 import {
   Table,
@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { getInventoryByGodown, getLocations } from '@/lib/supabase';
+import InventoryForm from './components/InventoryForm';
 
 interface Inventory {
   id: number;
@@ -34,41 +35,40 @@ const InventoryPage = () => {
   const [godowns, setGodowns] = useState<Location[]>([]);
   const [selectedGodown, setSelectedGodown] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [openAddStock, setOpenAddStock] = useState(false);
 
-  useEffect(() => {
-    const fetchGodowns = async () => {
+  const fetchGodowns = async () => {
+    try {
+      const locations = await getLocations('godown');
+      setGodowns(locations);
+      
+      if (locations.length > 0 && !selectedGodown) {
+        setSelectedGodown(locations[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching godowns:', error);
+    }
+  };
+
+  const fetchInventory = async () => {
+    if (selectedGodown) {
+      setIsLoading(true);
       try {
-        const locations = await getLocations('godown');
-        setGodowns(locations);
-        
-        if (locations.length > 0) {
-          setSelectedGodown(locations[0].id);
-        }
+        const data = await getInventoryByGodown(selectedGodown);
+        setInventory(data);
       } catch (error) {
-        console.error('Error fetching godowns:', error);
+        console.error('Error fetching inventory:', error);
       } finally {
         setIsLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     fetchGodowns();
   }, []);
 
   useEffect(() => {
-    const fetchInventory = async () => {
-      if (selectedGodown) {
-        setIsLoading(true);
-        try {
-          const data = await getInventoryByGodown(selectedGodown);
-          setInventory(data);
-        } catch (error) {
-          console.error('Error fetching inventory:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
     fetchInventory();
   }, [selectedGodown]);
 
@@ -76,14 +76,29 @@ const InventoryPage = () => {
     setSelectedGodown(Number(e.target.value));
   };
 
+  const handleStockAdded = () => {
+    setOpenAddStock(false);
+    fetchInventory();
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Inventory Management</h1>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Stock
-          </Button>
+          <Dialog open={openAddStock} onOpenChange={setOpenAddStock}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Add Stock
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <InventoryForm 
+                onSuccess={handleStockAdded} 
+                onCancel={() => setOpenAddStock(false)} 
+              />
+            </DialogContent>
+          </Dialog>
         </div>
 
         <Card>
@@ -99,6 +114,7 @@ const InventoryPage = () => {
                   className="border rounded p-1"
                   value={selectedGodown || ''}
                   onChange={handleGodownChange}
+                  disabled={godowns.length === 0}
                 >
                   {godowns.map((godown) => (
                     <option key={godown.id} value={godown.id}>
