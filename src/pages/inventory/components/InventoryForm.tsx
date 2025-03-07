@@ -100,13 +100,18 @@ const InventoryForm: React.FC<InventoryFormProps> = ({ onSuccess, onCancel }) =>
         });
         onSuccess();
       } else {
-        throw new Error(result.error || 'Failed to update inventory');
+        // Fix: Extract the message string properly from the error object
+        const errorMessage = typeof result.error === 'object' && result.error !== null
+          ? result.error.message || 'Failed to update inventory'
+          : 'Failed to update inventory';
+          
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('Error updating inventory:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update inventory. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to update inventory. Please try again.',
         variant: 'destructive'
       });
     } finally {
