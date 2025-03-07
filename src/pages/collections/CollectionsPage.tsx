@@ -38,15 +38,16 @@ import {
   Loader2,
   PackageOpen,
   MapPin,
-  Banknote
+  Banknote,
+  User
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { getLocations, createCollection, getDailyCollections } from '@/lib/supabase';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 // Define the material types enum to match the database enum
-type MaterialType = 'mixed_plastic' | 'paper' | 'cardboard' | 'metal' | 'glass' | 'organic' | 'electronic' | 'other';
+type MaterialType = 'mixed_plastic' | 'paper' | 'cardboard' | 'metal' | 'glass' | 'organic' | 'electronic' | 'textile' | 'rubber' | 'wood' | 'other';
 
 const materialTypes: MaterialType[] = [
   'mixed_plastic',
@@ -56,6 +57,9 @@ const materialTypes: MaterialType[] = [
   'glass',
   'organic',
   'electronic',
+  'textile',
+  'rubber',
+  'wood',
   'other'
 ];
 
@@ -74,7 +78,10 @@ const CollectionsPage = () => {
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('kg');
   const [amountPaid, setAmountPaid] = useState('');
+  const [commissionAgent, setCommissionAgent] = useState('');
+  const [commissionAmount, setCommissionAmount] = useState('');
   const [notes, setNotes] = useState('');
+  const [hasCommissionAgent, setHasCommissionAgent] = useState(false);
 
   const fetchCollections = async () => {
     setIsLoading(true);
@@ -125,13 +132,19 @@ const CollectionsPage = () => {
     }
     
     try {
+      // Include commission agent data if it exists
+      const commissionAgentValue = hasCommissionAgent ? commissionAgent : null;
+      const commissionAmountValue = hasCommissionAgent && commissionAmount ? Number(commissionAmount) : null;
+      
       const result = await createCollection(
         Number(locationId),
         material as MaterialType,
         Number(quantity),
         unit,
         Number(amountPaid),
-        notes
+        notes,
+        commissionAgentValue,
+        commissionAmountValue
       );
       
       if (result.success) {
@@ -159,13 +172,17 @@ const CollectionsPage = () => {
     setQuantity('');
     setUnit('kg');
     setAmountPaid('');
+    setCommissionAgent('');
+    setCommissionAmount('');
+    setHasCommissionAgent(false);
     setNotes('');
   };
 
   const filteredCollections = collections.filter(collection => 
     collection.location?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     collection.material?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    collection.quantity?.toString().includes(searchQuery.toLowerCase())
+    collection.quantity?.toString().includes(searchQuery.toLowerCase()) ||
+    (collection.commission_agent && collection.commission_agent.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const formatDate = (dateString) => {
@@ -199,7 +216,7 @@ const CollectionsPage = () => {
                   Record Collection
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
+              <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
                 <form onSubmit={handleAddCollection}>
                   <DialogHeader>
                     <DialogTitle>Record New Collection</DialogTitle>
@@ -282,6 +299,46 @@ const CollectionsPage = () => {
                         required
                       />
                     </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="hasCommissionAgent"
+                          checked={hasCommissionAgent}
+                          onChange={(e) => setHasCommissionAgent(e.target.checked)}
+                          className="rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <Label htmlFor="hasCommissionAgent">Commission Agent Involved</Label>
+                      </div>
+                    </div>
+                    
+                    {hasCommissionAgent && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="commissionAgent">Commission Agent Name</Label>
+                          <Input
+                            id="commissionAgent"
+                            placeholder="Agent name"
+                            value={commissionAgent}
+                            onChange={(e) => setCommissionAgent(e.target.value)}
+                            required={hasCommissionAgent}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="commissionAmount">Commission Amount</Label>
+                          <Input
+                            id="commissionAmount"
+                            type="number"
+                            placeholder="0.00"
+                            value={commissionAmount}
+                            onChange={(e) => setCommissionAmount(e.target.value)}
+                            required={hasCommissionAgent}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="space-y-2">
                       <Label htmlFor="notes">Notes</Label>
                       <Textarea
@@ -292,7 +349,13 @@ const CollectionsPage = () => {
                       />
                     </div>
                   </div>
-                  <DialogFooter>
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button type="button" variant="outline" onClick={() => {
+                      setOpenAddCollection(false);
+                      resetForm();
+                    }}>
+                      Cancel
+                    </Button>
                     <Button type="submit">Record Collection</Button>
                   </DialogFooter>
                 </form>
@@ -337,7 +400,7 @@ const CollectionsPage = () => {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : filteredCollections.length > 0 ? (
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -345,6 +408,7 @@ const CollectionsPage = () => {
                       <TableHead>Material</TableHead>
                       <TableHead>Quantity</TableHead>
                       <TableHead>Amount Paid</TableHead>
+                      <TableHead>Commission</TableHead>
                       <TableHead>Time</TableHead>
                       <TableHead>Notes</TableHead>
                     </TableRow>
@@ -375,6 +439,16 @@ const CollectionsPage = () => {
                             <Banknote className="mr-1 h-3 w-3" />
                             {collection.amount_paid}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {collection.commission_agent ? (
+                            <div className="flex items-center">
+                              <User className="mr-1 h-3 w-3" />
+                              {collection.commission_agent}: {collection.commission_amount}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">None</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center text-xs">

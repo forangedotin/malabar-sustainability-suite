@@ -14,6 +14,8 @@ export type Database = {
           amount_paid: number
           collected_by: string
           collection_date: string
+          commission_agent: string | null
+          commission_amount: number | null
           id: number
           location_id: number
           material: Database["public"]["Enums"]["material_type"]
@@ -25,6 +27,8 @@ export type Database = {
           amount_paid: number
           collected_by: string
           collection_date?: string
+          commission_agent?: string | null
+          commission_amount?: number | null
           id?: number
           location_id: number
           material: Database["public"]["Enums"]["material_type"]
@@ -36,6 +40,8 @@ export type Database = {
           amount_paid?: number
           collected_by?: string
           collection_date?: string
+          commission_agent?: string | null
+          commission_amount?: number | null
           id?: number
           location_id?: number
           material?: Database["public"]["Enums"]["material_type"]
@@ -549,6 +555,11 @@ export type Database = {
         | "glass"
         | "organic"
         | "other"
+        | "mixed_plastic"
+        | "cardboard"
+        | "textile"
+        | "rubber"
+        | "wood"
       payment_status: "paid" | "pending" | "payment_required"
       user_role: "admin" | "manager"
       vehicle_status:

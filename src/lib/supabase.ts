@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 const supabaseUrl = 'https://gvutttohyqrwqojajlpp.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2dXR0dG9oeXFyd3FvamFqbHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwODQ3MzAsImV4cCI6MjA1NjY2MDczMH0.rj0CMm3ibJl2Y5LjE0x-zJU__UTQisJ3YxTSFyOoi-U';
@@ -181,7 +181,9 @@ export async function createCollection(
   quantity: number,
   unit: string,
   amount_paid: number,
-  notes?: string
+  notes?: string,
+  commission_agent?: string | null,
+  commission_amount?: number | null
 ) {
   const user = await getCurrentUser();
   
@@ -204,6 +206,8 @@ export async function createCollection(
       unit,
       amount_paid,
       notes,
+      commission_agent,
+      commission_amount
     })
     .select()
     .single();
