@@ -357,6 +357,7 @@ export type Database = {
           quantity: number | null
           status: string | null
           to_location_id: number
+          token_code: string | null
           unit: string | null
           vehicle_id: number
         }
@@ -372,6 +373,7 @@ export type Database = {
           quantity?: number | null
           status?: string | null
           to_location_id: number
+          token_code?: string | null
           unit?: string | null
           vehicle_id: number
         }
@@ -387,6 +389,7 @@ export type Database = {
           quantity?: number | null
           status?: string | null
           to_location_id?: number
+          token_code?: string | null
           unit?: string | null
           vehicle_id?: number
         }
