@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Users, Plus, User, UserPlus } from 'lucide-react';
+import { Loader2, Users, User, UserPlus, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -13,10 +13,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/lib/supabase';
 import ManagerForm from './components/ManagerForm';
 import { useToast } from '@/components/ui/use-toast';
+import EditManagerForm from './components/EditManagerForm';
 
 interface Manager {
   id: string;
@@ -33,6 +44,9 @@ const ManagersPage = () => {
   const [managers, setManagers] = useState<Manager[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [openAddManager, setOpenAddManager] = useState(false);
+  const [openEditManager, setOpenEditManager] = useState(false);
+  const [currentManager, setCurrentManager] = useState<Manager | null>(null);
+  const [managerToDelete, setManagerToDelete] = useState<Manager | null>(null);
   const { toast } = useToast();
 
   const fetchManagers = async () => {
@@ -68,6 +82,70 @@ const ManagersPage = () => {
   const handleManagerAdded = () => {
     setOpenAddManager(false);
     fetchManagers();
+  };
+
+  const handleEditManager = (manager: Manager) => {
+    setCurrentManager(manager);
+    setOpenEditManager(true);
+  };
+
+  const handleManagerUpdated = () => {
+    setOpenEditManager(false);
+    setCurrentManager(null);
+    fetchManagers();
+  };
+
+  const handleDeleteManager = async () => {
+    if (!managerToDelete) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ active: false })
+        .eq('id', managerToDelete.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: 'Manager deactivated',
+        description: `${managerToDelete.first_name} ${managerToDelete.last_name} has been deactivated`
+      });
+      
+      setManagerToDelete(null);
+      fetchManagers();
+    } catch (error) {
+      console.error('Error deactivating manager:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to deactivate manager. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleActivateManager = async (manager: Manager) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ active: true })
+        .eq('id', manager.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: 'Manager activated',
+        description: `${manager.first_name} ${manager.last_name} has been activated`
+      });
+      
+      fetchManagers();
+    } catch (error) {
+      console.error('Error activating manager:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to activate manager. Please try again.',
+        variant: 'destructive'
+      });
+    }
   };
 
   if (!isAdmin) {
@@ -129,6 +207,7 @@ const ManagersPage = () => {
                     <TableHead>Phone</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -149,6 +228,37 @@ const ManagersPage = () => {
                           {manager.active ? 'Active' : 'Inactive'}
                         </span>
                       </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleEditManager(manager)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          
+                          {manager.active ? (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-red-600"
+                              onClick={() => setManagerToDelete(manager)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-green-600"
+                              onClick={() => handleActivateManager(manager)}
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -157,6 +267,41 @@ const ManagersPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Manager Dialog */}
+      <Dialog open={openEditManager} onOpenChange={setOpenEditManager}>
+        <DialogContent className="sm:max-w-[600px]">
+          {currentManager && (
+            <EditManagerForm 
+              manager={currentManager}
+              onSuccess={handleManagerUpdated} 
+              onCancel={() => setOpenEditManager(false)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Manager Confirmation */}
+      <AlertDialog 
+        open={!!managerToDelete} 
+        onOpenChange={(open) => !open && setManagerToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will deactivate the manager account for {managerToDelete?.first_name} {managerToDelete?.last_name}.
+              They will no longer be able to access the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteManager} className="bg-red-600 hover:bg-red-700">
+              Deactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };

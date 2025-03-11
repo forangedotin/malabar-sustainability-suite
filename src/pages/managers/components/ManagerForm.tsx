@@ -25,6 +25,7 @@ const ManagerForm: React.FC<ManagerFormProps> = ({ onSuccess, onCancel }) => {
   const [lastName, setLastName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [inviteInfo, setInviteInfo] = useState<any>(null);
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
@@ -69,11 +70,16 @@ const ManagerForm: React.FC<ManagerFormProps> = ({ onSuccess, onCancel }) => {
       );
       
       if (result.success) {
+        setInviteInfo(result.data?.invite);
+        
         toast({
           title: 'Manager account created',
           description: `New manager account for ${firstName} ${lastName} has been created`,
         });
-        onSuccess();
+        
+        if (!result.data?.invite) {
+          onSuccess();
+        }
       } else {
         throw new Error(
           typeof result.error === 'object' && result.error !== null && 'message' in result.error 
@@ -92,6 +98,39 @@ const ManagerForm: React.FC<ManagerFormProps> = ({ onSuccess, onCancel }) => {
       setIsLoading(false);
     }
   };
+
+  if (inviteInfo) {
+    return (
+      <div className="space-y-6">
+        <DialogHeader>
+          <DialogTitle>Manager Invite Created</DialogTitle>
+          <DialogDescription>
+            Share these credentials with the manager to complete their account setup.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+          <h3 className="font-medium text-yellow-800 mb-2">Manager Access Information</h3>
+          <div className="space-y-2 text-sm">
+            <p><span className="font-semibold">Name:</span> {inviteInfo.name}</p>
+            <p><span className="font-semibold">Email:</span> {inviteInfo.email}</p>
+            <p><span className="font-semibold">Password:</span> {inviteInfo.password}</p>
+            <p><span className="font-semibold">Invite Token:</span> {inviteInfo.token}</p>
+          </div>
+          <p className="mt-4 text-xs text-yellow-700">
+            Note: In a production environment, this information would be sent via email. 
+            For now, please take note of these credentials for the manager to sign in.
+          </p>
+        </div>
+        
+        <DialogFooter>
+          <Button onClick={onSuccess}>
+            Done
+          </Button>
+        </DialogFooter>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="max-h-[80vh] overflow-y-auto">

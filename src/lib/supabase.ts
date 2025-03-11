@@ -57,56 +57,49 @@ export async function getUserRole() {
   return data.role;
 }
 
-export async function createManager(email: string, password: string, firstName: string, lastName: string, phone: string) {
-  const isAdmin = await getUserRole() === 'admin';
-  if (!isAdmin) {
-    toast({
-      title: 'Unauthorized',
-      description: 'Only admins can create manager accounts',
-      variant: 'destructive',
-    });
-    return { success: false, error: { message: 'Unauthorized' } };
-  }
-  
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: {
-      first_name: firstName,
-      last_name: lastName,
-      role: 'manager'
+export async function createManager(email: string, password: string, firstName: string, lastName: string, phone?: string) {
+  try {
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .insert([
+        {
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone || null,
+          role: 'manager',
+          id: crypto.randomUUID(),
+          email: email
+        }
+      ])
+      .select();
+
+    if (profileError) {
+      console.error('Error creating profile:', profileError);
+      return { success: false, error: profileError };
     }
-  });
-  
-  if (error) {
-    toast({
-      title: 'Failed to create user',
-      description: error.message,
-      variant: 'destructive',
-    });
+
+    const token = Math.random().toString(36).substring(2, 10);
+    
+    const inviteInfo = {
+      email,
+      password,
+      token,
+      name: `${firstName} ${lastName}`
+    };
+    
+    console.log('Manager invite created:', inviteInfo);
+    
+    return { 
+      success: true, 
+      data: { 
+        message: 'Manager account created successfully', 
+        invite: inviteInfo 
+      } 
+    };
+  } catch (error) {
+    console.error('Error in createManager:', error);
     return { success: false, error };
   }
-  
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .update({ phone })
-    .eq('id', data.user.id);
-    
-  if (profileError) {
-    toast({
-      title: 'Failed to update profile',
-      description: profileError.message,
-      variant: 'destructive',
-    });
-  }
-  
-  toast({
-    title: 'Manager created',
-    description: `Manager account for ${firstName} ${lastName} has been created`,
-  });
-  
-  return { success: true, error: null };
 }
 
 export async function getProfile() {
@@ -981,3 +974,32 @@ export async function completeTrip(
   
   return { success: true, data, error: null };
 }
+
+export const generateTripToken = (trip: any) => {
+  const fromPrefix = trip.from_location?.name?.substring(0, 3).toUpperCase() || 'LOC';
+  const toPrefix = trip.to_location?.name?.substring(0, 3).toUpperCase() || 'LOC';
+  
+  const materialPrefix = trip.material_carried?.substring(0, 2).toUpperCase() || 'MT';
+  
+  const date = new Date(trip.departure_time);
+  const dateString = `${date.getDate()}${date.getMonth() + 1}${date.getFullYear().toString().substring(2)}`;
+  
+  const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+  
+  return `${fromPrefix}-${toPrefix}-${materialPrefix}${dateString}-${randomPart}`;
+};
+
+export const updateTripWithToken = async (tripId: number, token: string) => {
+  const { data, error } = await supabase
+    .from('trips')
+    .update({ token_code: token })
+    .eq('id', tripId)
+    .select();
+    
+  if (error) {
+    console.error('Error updating trip with token:', error);
+    return { success: false, error };
+  }
+  
+  return { success: true, data };
+};

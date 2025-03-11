@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,11 +41,13 @@ import {
   Route,
   ArrowRight,
   Calendar,
-  CheckCircle
+  CheckCircle,
+  Edit,
+  Copy
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { getTrips, createTrip, completeTrip, getVehicles, getDrivers, getLocations } from '@/lib/supabase';
+import { getTrips, createTrip, completeTrip, getVehicles, getDrivers, getLocations, generateTripToken, updateTripWithToken } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 
 type MaterialType = 'mixed_plastic' | 'paper' | 'cardboard' | 'metal' | 'glass' | 'organic' | 'electronic' | 'other';
@@ -78,12 +81,32 @@ const TripsPage = () => {
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('');
   const [notes, setNotes] = useState('');
+  const [selectedTrip, setSelectedTrip] = useState(null);
+  const [openTripDetails, setOpenTripDetails] = useState(false);
 
   const fetchTrips = async () => {
     setIsLoading(true);
     try {
       const tripsData = await getTrips();
-      setTrips(tripsData || []);
+      
+      // If any trip doesn't have a token, generate one
+      const updatedTrips = [];
+      
+      for (const trip of tripsData || []) {
+        if (!trip.token_code) {
+          const token = generateTripToken(trip);
+          const result = await updateTripWithToken(trip.id, token);
+          if (result.success) {
+            updatedTrips.push({...trip, token_code: token});
+          } else {
+            updatedTrips.push(trip);
+          }
+        } else {
+          updatedTrips.push(trip);
+        }
+      }
+      
+      setTrips(updatedTrips);
     } catch (error) {
       console.error('Error fetching trips:', error);
       toast({
@@ -147,12 +170,16 @@ const TripsPage = () => {
       );
       
       if (result.success) {
+        // Generate token for the new trip
+        const token = generateTripToken(result.data);
+        await updateTripWithToken(result.data.id, token);
+        
         setOpenAddTrip(false);
         resetForm();
         fetchTrips();
         toast({
           title: 'Trip created',
-          description: 'The trip has been recorded successfully.'
+          description: 'The trip has been recorded successfully.',
         });
       }
     } catch (error) {
@@ -204,12 +231,13 @@ const TripsPage = () => {
   };
 
   const filteredTrips = trips.filter(trip => 
-    trip.vehicle?.registration_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (trip.vehicle?.registration_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     trip.driver?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     trip.from_location?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     trip.to_location?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     trip.material_carried?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    trip.status?.toLowerCase().includes(searchQuery.toLowerCase())
+    trip.status?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    trip.token_code?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const getStatusBadge = (status) => {
@@ -233,6 +261,20 @@ const TripsPage = () => {
 
   const formatMaterialType = (type: string) => {
     return type?.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({
+        title: 'Copied!',
+        description: 'Token copied to clipboard',
+      });
+    });
+  };
+
+  const viewTripDetails = (trip) => {
+    setSelectedTrip(trip);
+    setOpenTripDetails(true);
   };
 
   return (
@@ -410,7 +452,7 @@ const TripsPage = () => {
         <div className="flex w-full items-center space-x-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search trips by vehicle, driver, location or material..."
+            placeholder="Search trips by vehicle, driver, location, material or token..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1"
@@ -437,6 +479,7 @@ const TripsPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Token</TableHead>
                       <TableHead>Vehicle</TableHead>
                       <TableHead>Driver</TableHead>
                       <TableHead>Route</TableHead>
@@ -450,6 +493,19 @@ const TripsPage = () => {
                   <TableBody>
                     {filteredTrips.map((trip) => (
                       <TableRow key={trip.id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-1">
+                            <span className="font-mono text-xs">{trip.token_code}</span>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-5 w-5 p-0"
+                              onClick={() => copyToClipboard(trip.token_code)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center">
                             <Car className="mr-1 h-3 w-3" />
@@ -485,21 +541,31 @@ const TripsPage = () => {
                           {getStatusBadge(trip.status)}
                         </TableCell>
                         <TableCell>
-                          {trip.status === 'in_progress' && (
+                          <div className="flex space-x-1">
                             <Button 
                               variant="ghost" 
-                              size="sm"
-                              onClick={() => handleCompleteTrip(trip)}
+                              size="sm" 
+                              onClick={() => viewTripDetails(trip)}
                             >
-                              <CheckCircle className="mr-1 h-3 w-3" />
-                              Complete
+                              <Edit className="h-3 w-3" />
                             </Button>
-                          )}
-                          {trip.status === 'completed' && (
-                            <span className="text-xs text-muted-foreground">
-                              Completed {trip.arrival_time ? formatDate(trip.arrival_time) : ''}
-                            </span>
-                          )}
+                            
+                            {trip.status === 'in_progress' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleCompleteTrip(trip)}
+                              >
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Complete
+                              </Button>
+                            )}
+                            {trip.status === 'completed' && (
+                              <span className="text-xs text-muted-foreground">
+                                Completed {trip.arrival_time ? formatDate(trip.arrival_time) : ''}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -524,6 +590,110 @@ const TripsPage = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Trip Details Dialog */}
+      <Dialog open={openTripDetails} onOpenChange={setOpenTripDetails}>
+        <DialogContent className="sm:max-w-[600px]">
+          {selectedTrip && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Trip Details</DialogTitle>
+                <DialogDescription>
+                  Detailed information about this trip.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="bg-muted p-3 rounded-md">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="font-semibold text-lg">Token:</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono">{selectedTrip.token_code}</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6"
+                        onClick={() => copyToClipboard(selectedTrip.token_code)}
+                      >
+                        <Copy className="h-3 w-3 mr-1" /> Copy
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {getStatusBadge(selectedTrip.status)}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-muted-foreground mb-1">Vehicle</h4>
+                    <p>{selectedTrip.vehicle?.registration_number} ({selectedTrip.vehicle?.type})</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-muted-foreground mb-1">Driver</h4>
+                    <p>{selectedTrip.driver?.name}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-muted-foreground mb-1">From</h4>
+                    <p>{selectedTrip.from_location?.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedTrip.from_location?.address}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-muted-foreground mb-1">To</h4>
+                    <p>{selectedTrip.to_location?.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedTrip.to_location?.address}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-muted-foreground mb-1">Material</h4>
+                    <p>{formatMaterialType(selectedTrip.material_carried)}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-muted-foreground mb-1">Quantity</h4>
+                    <p>{selectedTrip.quantity} {selectedTrip.unit}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-muted-foreground mb-1">Departure</h4>
+                    <p>{formatDate(selectedTrip.departure_time)}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-muted-foreground mb-1">Arrival</h4>
+                    <p>{selectedTrip.arrival_time ? formatDate(selectedTrip.arrival_time) : 'Not arrived yet'}</p>
+                  </div>
+                </div>
+                
+                {selectedTrip.notes && (
+                  <div>
+                    <h4 className="font-medium text-muted-foreground mb-1">Notes</h4>
+                    <p className="text-sm">{selectedTrip.notes}</p>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                {selectedTrip.status === 'in_progress' && (
+                  <Button onClick={() => {
+                    handleCompleteTrip(selectedTrip);
+                    setOpenTripDetails(false);
+                  }}>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Mark as Completed
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setOpenTripDetails(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
