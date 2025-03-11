@@ -14,6 +14,8 @@ import CollectionsPage from './pages/collections/CollectionsPage';
 import InventoryPage from './pages/inventory/InventoryPage';
 import SalesPage from './pages/sales/SalesPage';
 import ExpensesPage from './pages/expenses/ExpensesPage';
+import ReportsPage from './pages/reports/ReportsPage';
+import ManagersPage from './pages/managers/ManagersPage';
 
 function App() {
   return (
@@ -77,6 +79,26 @@ function App() {
             element={
               <ProtectedRoute>
                 <ExpensesPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Reports Route */}
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <ReportsPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Managers Route */}
+          <Route
+            path="/managers"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <ManagersPage />
               </ProtectedRoute>
             }
           />
