@@ -77,7 +77,7 @@ const ExpensesPage = () => {
                 <Plus className="mr-2 h-4 w-4" /> Record Expense
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[600px]">
               <ExpenseForm 
                 onSuccess={handleExpenseAdded} 
                 onCancel={() => setOpenAddExpense(false)} 

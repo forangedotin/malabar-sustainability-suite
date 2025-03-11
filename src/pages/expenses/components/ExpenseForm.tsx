@@ -96,13 +96,15 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess, onCancel }) => {
         });
         onSuccess();
       } else {
-        throw new Error(result.error || 'Failed to record expense');
+        throw new Error(typeof result.error === 'object' && result.error !== null && 'message' in result.error 
+          ? result.error.message 
+          : 'Failed to record expense');
       }
     } catch (error) {
       console.error('Error recording expense:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to record expense. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to record expense. Please try again.',
         variant: 'destructive'
       });
     } finally {
@@ -111,7 +113,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess, onCancel }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="max-h-[80vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>Record New Expense</DialogTitle>
         <DialogDescription>
@@ -181,7 +183,6 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess, onCancel }) => {
               <SelectValue placeholder="Select location (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
               {locations.map((location) => (
                 <SelectItem key={location.id} value={location.id.toString()}>
                   {location.name} ({location.type === 'godown' ? 'Godown' : 'Collection Point'})
