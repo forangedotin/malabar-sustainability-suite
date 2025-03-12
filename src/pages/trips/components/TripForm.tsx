@@ -51,7 +51,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSuccess, onCancel }) => {
   }, []);
   
   useEffect(() => {
-    if (trip) {
+    if (trip && materials.length > 0) {
       setSelectedVehicleId(trip.vehicle_id.toString());
       setSelectedDriverId(trip.driver_id.toString());
       setFromLocationId(trip.from_location_id.toString());
@@ -62,12 +62,17 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSuccess, onCancel }) => {
       setCommissionAmount(trip.commission_amount?.toString() || '');
       setNotes(trip.notes || '');
       
-      // If using materials table, need to find the corresponding material ID
+      // Fix for material handling - find material by name
       if (trip.material_carried) {
-        const materialName = trip.material_carried;
-        const matchingMaterial = materials.find(m => m.name === materialName);
+        const matchingMaterial = materials.find(m => m.name.toLowerCase() === (trip.material_carried.toLowerCase ? trip.material_carried.toLowerCase() : ''));
         if (matchingMaterial) {
           setMaterialId(matchingMaterial.id.toString());
+        } else {
+          console.warn('Material not found:', trip.material_carried);
+          // If no match found but we have materials, default to first one
+          if (materials.length > 0) {
+            setMaterialId(materials[0].id.toString());
+          }
         }
       }
     }
@@ -87,7 +92,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSuccess, onCancel }) => {
       setLocations(locationsData || []);
       setMaterials(materialsData || []);
       
-      // Set default values
+      // Set default values for new trip
       if (!trip) {
         if (vehiclesData.length > 0) setSelectedVehicleId(vehiclesData[0].id.toString());
         if (driversData.length > 0) setSelectedDriverId(driversData[0].id.toString());
@@ -179,7 +184,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSuccess, onCancel }) => {
     
     setIsLoading(true);
     try {
-      const selectedMaterial = materials.find(m => m.id.toString() === materialId)?.name;
+      // Find the selected material name
+      const selectedMaterial = materials.find(m => m.id.toString() === materialId);
+      if (!selectedMaterial) {
+        throw new Error('Selected material not found');
+      }
       
       if (trip) {
         // Update existing trip
@@ -190,7 +199,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSuccess, onCancel }) => {
             driver_id: Number(selectedDriverId),
             from_location_id: Number(fromLocationId),
             to_location_id: Number(toLocationId),
-            material_carried: selectedMaterial,
+            material_carried: selectedMaterial.name,
             quantity: Number(quantity),
             unit,
             commission_agent: commissionAgent || null,
@@ -217,7 +226,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSuccess, onCancel }) => {
             driver_id: Number(selectedDriverId),
             from_location_id: Number(fromLocationId),
             to_location_id: Number(toLocationId),
-            material_carried: selectedMaterial,
+            material_carried: selectedMaterial.name,
             quantity: Number(quantity),
             unit,
             commission_agent: commissionAgent || null,
