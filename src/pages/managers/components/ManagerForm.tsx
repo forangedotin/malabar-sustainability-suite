@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   DialogHeader,
@@ -60,20 +61,24 @@ const ManagerForm: React.FC<ManagerFormProps> = ({ onSuccess, onCancel }) => {
     
     setIsLoading(true);
     try {
-      const profileId = crypto.randomUUID();
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: profileId,
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone || null,
-          role: 'manager'
-        });
+      // Call the database function to create a user with profile
+      const { data, error } = await supabase.rpc('create_user_with_profile', {
+        user_email: email,
+        user_password: password,
+        first_name: firstName,
+        last_name: lastName,
+        user_phone: phone || null,
+        user_role: 'manager'
+      });
       
-      if (profileError) {
-        console.error('Error creating profile:', profileError);
-        throw new Error(profileError.message);
+      if (error) {
+        console.error('Error creating manager:', error);
+        throw new Error(error.message);
+      }
+      
+      if (data?.error) {
+        console.error('Error from function:', data.error);
+        throw new Error(data.error);
       }
       
       const token = Math.random().toString(36).substring(2, 10);
@@ -237,4 +242,3 @@ const ManagerForm: React.FC<ManagerFormProps> = ({ onSuccess, onCancel }) => {
 };
 
 export default ManagerForm;
-

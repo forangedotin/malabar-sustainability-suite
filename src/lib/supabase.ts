@@ -59,26 +59,25 @@ export async function getUserRole() {
 
 export async function createManager(email: string, password: string, firstName: string, lastName: string, phone?: string) {
   try {
-    const profileId = crypto.randomUUID();
+    const { data, error } = await supabase.rpc('create_user_with_profile', {
+      user_email: email,
+      user_password: password,
+      first_name: firstName,
+      last_name: lastName,
+      user_phone: phone || null,
+      user_role: 'manager'
+    });
     
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .insert([
-        {
-          id: profileId,
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone || null,
-          role: 'manager'
-        }
-      ])
-      .select();
-
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
-      return { success: false, error: profileError };
+    if (error) {
+      console.error('Error creating manager:', error);
+      return { success: false, error };
     }
-
+    
+    if (data?.error) {
+      console.error('Error from function:', data.error);
+      return { success: false, error: { message: data.error } };
+    }
+    
     const token = Math.random().toString(36).substring(2, 10);
     
     const inviteInfo = {
@@ -894,7 +893,9 @@ export async function createTrip(
   materialCarried: string,
   quantity: number,
   unit: string,
-  notes?: string
+  notes?: string,
+  commissionAgent?: string,
+  commissionAmount?: number
 ) {
   const user = await getCurrentUser();
   
@@ -918,6 +919,8 @@ export async function createTrip(
       quantity,
       unit,
       created_by: user.id,
+      commission_agent: commissionAgent,
+      commission_amount: commissionAmount,
       notes
     })
     .select()
@@ -937,6 +940,53 @@ export async function createTrip(
   toast({
     title: 'Trip created',
     description: `Trip has been recorded successfully`,
+  });
+  
+  return { success: true, data, error: null };
+}
+
+export async function updateTrip(
+  tripId: number,
+  vehicleId: number,
+  driverId: number,
+  fromLocationId: number,
+  toLocationId: number,
+  materialCarried: string,
+  quantity: number,
+  unit: string,
+  notes?: string,
+  commissionAgent?: string,
+  commissionAmount?: number
+) {
+  const { data, error } = await supabase
+    .from('trips')
+    .update({
+      vehicle_id: vehicleId,
+      driver_id: driverId,
+      from_location_id: fromLocationId,
+      to_location_id: toLocationId,
+      material_carried: materialCarried,
+      quantity,
+      unit,
+      commission_agent: commissionAgent,
+      commission_amount: commissionAmount,
+      notes
+    })
+    .eq('id', tripId)
+    .select();
+    
+  if (error) {
+    toast({
+      title: 'Failed to update trip',
+      description: error.message,
+      variant: 'destructive',
+    });
+    return { success: false, error };
+  }
+  
+  toast({
+    title: 'Trip updated',
+    description: `Trip has been updated successfully`,
   });
   
   return { success: true, data, error: null };
@@ -1004,3 +1054,45 @@ export const updateTripWithToken = async (tripId: number, token: string) => {
   
   return { success: true, data };
 };
+
+export async function getMaterials() {
+  const { data, error } = await supabase
+    .from('materials')
+    .select('*')
+    .eq('is_active', true)
+    .order('name');
+    
+  if (error) {
+    console.error('Error fetching materials:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function createMaterial(name: string, category: string) {
+  const { data, error } = await supabase
+    .from('materials')
+    .insert({
+      name,
+      category
+    })
+    .select()
+    .single();
+    
+  if (error) {
+    toast({
+      title: 'Failed to create material',
+      description: error.message,
+      variant: 'destructive',
+    });
+    return { success: false, error };
+  }
+  
+  toast({
+    title: 'Material created',
+    description: `${name} has been added to materials`,
+  });
+  
+  return { success: true, data, error: null };
+}

@@ -209,9 +209,34 @@ export type Database = {
         }
         Relationships: []
       }
+      materials: {
+        Row: {
+          category: string
+          created_at: string
+          id: number
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
+          email: string | null
           first_name: string
           id: string
           last_name: string
@@ -221,6 +246,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email?: string | null
           first_name: string
           id: string
           last_name: string
@@ -230,6 +256,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email?: string | null
           first_name?: string
           id?: string
           last_name?: string
@@ -347,6 +374,8 @@ export type Database = {
       trips: {
         Row: {
           arrival_time: string | null
+          commission_agent: string | null
+          commission_amount: number | null
           created_by: string
           departure_time: string | null
           driver_id: number
@@ -363,6 +392,8 @@ export type Database = {
         }
         Insert: {
           arrival_time?: string | null
+          commission_agent?: string | null
+          commission_amount?: number | null
           created_by: string
           departure_time?: string | null
           driver_id: number
@@ -379,6 +410,8 @@ export type Database = {
         }
         Update: {
           arrival_time?: string | null
+          commission_agent?: string | null
+          commission_amount?: number | null
           created_by?: string
           departure_time?: string | null
           driver_id?: number
@@ -538,6 +571,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_user_with_profile: {
+        Args: {
+          user_email: string
+          user_password: string
+          first_name: string
+          last_name: string
+          user_phone: string
+          user_role?: string
+        }
+        Returns: Json
+      }
       generate_token_code: {
         Args: Record<PropertyKey, never>
         Returns: string

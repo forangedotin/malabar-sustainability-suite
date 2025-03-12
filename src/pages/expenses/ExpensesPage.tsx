@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, DollarSign, Plus } from 'lucide-react';
+import { Loader2, DollarSign, Plus, Edit } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -33,6 +33,8 @@ const ExpensesPage = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [openAddExpense, setOpenAddExpense] = useState(false);
+  const [currentExpense, setCurrentExpense] = useState<Expense | null>(null);
+  const [openEditExpense, setOpenEditExpense] = useState(false);
 
   const fetchExpenses = async () => {
     setIsLoading(true);
@@ -64,6 +66,17 @@ const ExpensesPage = () => {
   const handleExpenseAdded = () => {
     setOpenAddExpense(false);
     fetchExpenses();
+  };
+
+  const handleExpenseUpdated = () => {
+    setOpenEditExpense(false);
+    setCurrentExpense(null);
+    fetchExpenses();
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setCurrentExpense(expense);
+    setOpenEditExpense(true);
   };
 
   return (
@@ -123,7 +136,9 @@ const ExpensesPage = () => {
                       <TableCell>{expense.paid_to}</TableCell>
                       <TableCell>{expense.location?.name || 'N/A'}</TableCell>
                       <TableCell>
-                        <Button variant="outline" size="sm">View</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)}>
+                          <Edit className="h-4 w-4 mr-1" /> Edit
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -133,6 +148,19 @@ const ExpensesPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Expense Dialog */}
+      <Dialog open={openEditExpense} onOpenChange={setOpenEditExpense}>
+        <DialogContent className="sm:max-w-[600px]">
+          {currentExpense && (
+            <ExpenseForm 
+              expense={currentExpense}
+              onSuccess={handleExpenseUpdated} 
+              onCancel={() => setOpenEditExpense(false)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
