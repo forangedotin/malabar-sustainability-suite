@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   DialogHeader,
@@ -10,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { createManager } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 interface ManagerFormProps {
   onSuccess: () => void;
@@ -61,32 +60,37 @@ const ManagerForm: React.FC<ManagerFormProps> = ({ onSuccess, onCancel }) => {
     
     setIsLoading(true);
     try {
-      const result = await createManager(
+      const profileId = crypto.randomUUID();
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: profileId,
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone || null,
+          role: 'manager'
+        });
+      
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        throw new Error(profileError.message);
+      }
+      
+      const token = Math.random().toString(36).substring(2, 10);
+      
+      const inviteInfo = {
         email,
         password,
-        firstName,
-        lastName,
-        phone
-      );
+        token,
+        name: `${firstName} ${lastName}`
+      };
       
-      if (result.success) {
-        setInviteInfo(result.data?.invite);
-        
-        toast({
-          title: 'Manager account created',
-          description: `New manager account for ${firstName} ${lastName} has been created`,
-        });
-        
-        if (!result.data?.invite) {
-          onSuccess();
-        }
-      } else {
-        throw new Error(
-          typeof result.error === 'object' && result.error !== null && 'message' in result.error 
-            ? result.error.message 
-            : 'Failed to create manager account'
-        );
-      }
+      setInviteInfo(inviteInfo);
+      
+      toast({
+        title: 'Manager account created',
+        description: `New manager account for ${firstName} ${lastName} has been created`,
+      });
     } catch (error) {
       console.error('Error creating manager:', error);
       toast({
@@ -233,3 +237,4 @@ const ManagerForm: React.FC<ManagerFormProps> = ({ onSuccess, onCancel }) => {
 };
 
 export default ManagerForm;
+

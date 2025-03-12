@@ -59,16 +59,17 @@ export async function getUserRole() {
 
 export async function createManager(email: string, password: string, firstName: string, lastName: string, phone?: string) {
   try {
+    const profileId = crypto.randomUUID();
+    
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .insert([
         {
+          id: profileId,
           first_name: firstName,
           last_name: lastName,
           phone: phone || null,
-          role: 'manager',
-          id: crypto.randomUUID(),
-          email: email
+          role: 'manager'
         }
       ])
       .select();

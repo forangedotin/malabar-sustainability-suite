@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Users, User, UserPlus, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Users, User, UserPlus, Edit, Trash2, CheckCircle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -231,11 +230,11 @@ const ManagersPage = () => {
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button 
-                            variant="ghost" 
+                            variant="outline" 
                             size="sm" 
                             onClick={() => handleEditManager(manager)}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-4 w-4 mr-1" /> Edit
                           </Button>
                           
                           {manager.active ? (
