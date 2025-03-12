@@ -1096,3 +1096,37 @@ export async function createMaterial(name: string, category: string) {
   
   return { success: true, data, error: null };
 }
+
+export const updateExpense = async (
+  expenseId: number,
+  category: string,
+  amount: number,
+  paidTo: string,
+  locationId?: number,
+  notes?: string
+) => {
+  try {
+    const { data, error } = await supabase
+      .from('expenses')
+      .update({
+        category,
+        amount,
+        paid_to: paidTo,
+        location_id: locationId,
+        notes,
+        updated_at: new Date()
+      })
+      .eq('id', expenseId)
+      .select();
+
+    if (error) {
+      console.error('Error updating expense:', error);
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error updating expense:', error);
+    return { success: false, error };
+  }
+};

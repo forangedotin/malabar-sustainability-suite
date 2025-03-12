@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { recordExpense, getLocations } from '@/lib/supabase';
+import { recordExpense, getLocations, updateExpense } from '@/lib/supabase';
 
 interface Location {
   id: number;
@@ -26,7 +26,21 @@ interface Location {
   type: string;
 }
 
+interface Expense {
+  id: number;
+  category: string;
+  amount: number;
+  paid_to: string;
+  expense_date: string;
+  notes?: string;
+  location_id?: number;
+  location?: {
+    name: string;
+  };
+}
+
 interface ExpenseFormProps {
+  expense?: Expense;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -44,15 +58,16 @@ const EXPENSE_CATEGORIES = [
   'other'
 ];
 
-const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess, onCancel }) => {
+const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, onSuccess, onCancel }) => {
   const { toast } = useToast();
-  const [category, setCategory] = useState<string>('');
-  const [amount, setAmount] = useState<string>('');
-  const [paidTo, setPaidTo] = useState<string>('');
-  const [locationId, setLocationId] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
+  const [category, setCategory] = useState<string>(expense?.category || '');
+  const [amount, setAmount] = useState<string>(expense ? expense.amount.toString() : '');
+  const [paidTo, setPaidTo] = useState<string>(expense?.paid_to || '');
+  const [locationId, setLocationId] = useState<string>(expense?.location_id?.toString() || '');
+  const [notes, setNotes] = useState<string>(expense?.notes || '');
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const isEditing = Boolean(expense);
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -81,30 +96,47 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess, onCancel }) => {
     
     setIsLoading(true);
     try {
-      const result = await recordExpense(
-        category,
-        parseFloat(amount),
-        paidTo,
-        locationId ? parseInt(locationId) : undefined,
-        notes || undefined
-      );
+      let result;
+      
+      if (isEditing && expense) {
+        // Update existing expense
+        result = await updateExpense(
+          expense.id,
+          category,
+          parseFloat(amount),
+          paidTo,
+          locationId ? parseInt(locationId) : undefined,
+          notes || undefined
+        );
+      } else {
+        // Create new expense
+        result = await recordExpense(
+          category,
+          parseFloat(amount),
+          paidTo,
+          locationId ? parseInt(locationId) : undefined,
+          notes || undefined
+        );
+      }
       
       if (result.success) {
         toast({
-          title: 'Expense recorded',
-          description: `Expense of ₹${amount} has been recorded successfully`,
+          title: isEditing ? 'Expense updated' : 'Expense recorded',
+          description: isEditing 
+            ? `Expense of ₹${amount} has been updated successfully` 
+            : `Expense of ₹${amount} has been recorded successfully`,
         });
         onSuccess();
       } else {
         throw new Error(typeof result.error === 'object' && result.error !== null && 'message' in result.error 
           ? result.error.message 
-          : 'Failed to record expense');
+          : 'Failed to process expense');
       }
     } catch (error) {
-      console.error('Error recording expense:', error);
+      console.error('Error with expense:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to record expense. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to process expense. Please try again.',
         variant: 'destructive'
       });
     } finally {
@@ -115,9 +147,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess, onCancel }) => {
   return (
     <form onSubmit={handleSubmit} className="max-h-[80vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle>Record New Expense</DialogTitle>
+        <DialogTitle>{isEditing ? 'Edit Expense' : 'Record New Expense'}</DialogTitle>
         <DialogDescription>
-          Enter the expense details to record it in the system.
+          {isEditing ? 'Update the expense details.' : 'Enter the expense details to record it in the system.'}
         </DialogDescription>
       </DialogHeader>
       <div className="grid gap-4 py-4">
@@ -210,7 +242,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSuccess, onCancel }) => {
           Cancel
         </Button>
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Recording...' : 'Record Expense'}
+          {isLoading ? (isEditing ? 'Updating...' : 'Recording...') : (isEditing ? 'Update Expense' : 'Record Expense')}
         </Button>
       </DialogFooter>
     </form>
