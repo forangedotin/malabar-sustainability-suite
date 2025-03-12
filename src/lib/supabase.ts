@@ -1106,6 +1106,13 @@ export const updateExpense = async (
   notes?: string
 ) => {
   try {
+    if (!expenseId) {
+      return { 
+        success: false, 
+        error: { message: 'Missing expense ID for update' } 
+      };
+    }
+    
     const { data, error } = await supabase
       .from('expenses')
       .update({
@@ -1114,7 +1121,7 @@ export const updateExpense = async (
         paid_to: paidTo,
         location_id: locationId,
         notes,
-        updated_at: new Date()
+        updated_at: new Date().toISOString()
       })
       .eq('id', expenseId)
       .select();
@@ -1127,6 +1134,9 @@ export const updateExpense = async (
     return { success: true, data };
   } catch (error) {
     console.error('Error updating expense:', error);
-    return { success: false, error };
+    return { 
+      success: false, 
+      error: error instanceof Error ? { message: error.message } : { message: 'Unknown error occurred' } 
+    };
   }
 };

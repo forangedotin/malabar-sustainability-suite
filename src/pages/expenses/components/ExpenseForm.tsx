@@ -76,11 +76,27 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, onSuccess, onCancel 
         setLocations(locationsData || []);
       } catch (error) {
         console.error('Error fetching locations:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load locations. Please try again.',
+          variant: 'destructive'
+        });
       }
     };
 
     fetchLocations();
-  }, []);
+  }, [toast]);
+
+  // Effect to update form when expense prop changes
+  useEffect(() => {
+    if (expense) {
+      setCategory(expense.category || '');
+      setAmount(expense.amount?.toString() || '');
+      setPaidTo(expense.paid_to || '');
+      setLocationId(expense.location_id?.toString() || '');
+      setNotes(expense.notes || '');
+    }
+  }, [expense]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,25 +112,31 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, onSuccess, onCancel 
     
     setIsLoading(true);
     try {
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount)) {
+        throw new Error('Invalid amount value');
+      }
+      
       let result;
+      const parsedLocationId = locationId ? parseInt(locationId) : undefined;
       
       if (isEditing && expense) {
         // Update existing expense
         result = await updateExpense(
           expense.id,
           category,
-          parseFloat(amount),
+          parsedAmount,
           paidTo,
-          locationId ? parseInt(locationId) : undefined,
+          parsedLocationId,
           notes || undefined
         );
       } else {
         // Create new expense
         result = await recordExpense(
           category,
-          parseFloat(amount),
+          parsedAmount,
           paidTo,
-          locationId ? parseInt(locationId) : undefined,
+          parsedLocationId,
           notes || undefined
         );
       }
@@ -123,8 +145,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, onSuccess, onCancel 
         toast({
           title: isEditing ? 'Expense updated' : 'Expense recorded',
           description: isEditing 
-            ? `Expense of ₹${amount} has been updated successfully` 
-            : `Expense of ₹${amount} has been recorded successfully`,
+            ? `Expense of ₹${parsedAmount} has been updated successfully` 
+            : `Expense of ₹${parsedAmount} has been recorded successfully`,
         });
         onSuccess();
       } else {
