@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   DialogHeader,
@@ -64,11 +63,27 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSuccess, onCancel }) => {
       
       // Fix for material handling - find material by name
       if (trip.material_carried) {
-        const matchingMaterial = materials.find(m => m.name.toLowerCase() === (trip.material_carried.toLowerCase ? trip.material_carried.toLowerCase() : ''));
+        // Handle both string and enum material value
+        const materialName = typeof trip.material_carried === 'string' 
+          ? trip.material_carried 
+          : String(trip.material_carried);
+          
+        // First try direct match
+        let matchingMaterial = materials.find(m => m.name === materialName);
+        
+        // If no direct match, try case-insensitive match
+        if (!matchingMaterial) {
+          matchingMaterial = materials.find(m => 
+            m.name.toLowerCase() === (typeof materialName === 'string' 
+              ? materialName.toLowerCase() 
+              : String(materialName).toLowerCase())
+          );
+        }
+        
         if (matchingMaterial) {
           setMaterialId(matchingMaterial.id.toString());
         } else {
-          console.warn('Material not found:', trip.material_carried);
+          console.warn('Material not found:', materialName);
           // If no match found but we have materials, default to first one
           if (materials.length > 0) {
             setMaterialId(materials[0].id.toString());
@@ -190,6 +205,9 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSuccess, onCancel }) => {
         throw new Error('Selected material not found');
       }
       
+      // Make sure we're sending a string value for material_carried
+      const materialName = selectedMaterial.name.toString();
+      
       if (trip) {
         // Update existing trip
         const { data, error } = await supabase
@@ -199,7 +217,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSuccess, onCancel }) => {
             driver_id: Number(selectedDriverId),
             from_location_id: Number(fromLocationId),
             to_location_id: Number(toLocationId),
-            material_carried: selectedMaterial.name,
+            material_carried: materialName,
             quantity: Number(quantity),
             unit,
             commission_agent: commissionAgent || null,
@@ -226,7 +244,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSuccess, onCancel }) => {
             driver_id: Number(selectedDriverId),
             from_location_id: Number(fromLocationId),
             to_location_id: Number(toLocationId),
-            material_carried: selectedMaterial.name,
+            material_carried: materialName,
             quantity: Number(quantity),
             unit,
             commission_agent: commissionAgent || null,
