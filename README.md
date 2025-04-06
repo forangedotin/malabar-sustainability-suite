@@ -16,6 +16,24 @@ Our vehicles and drivers handle all transport between facilities and to buyers. 
 
 I need this system to maintain consistent voucher numbers across related transactions, update inventory in real-time, and provide easy-to-use interfaces for all our staff to record these operations accurately.
 
+## Rate Management and Historical Data Integrity
+
+Our business operates with variable rates that change over time:
+- Material purchase rates from LSGIs may change based on negotiations or government policies
+- Labor rates for loading, unloading, segregation, and bailing adjust periodically
+- Sales rates to recycling companies and AFR parties fluctuate with market conditions
+- Commission rates may vary by agent or over time
+
+The system must:
+1. Allow administrators to update current rates for all operations
+2. Store the rates used at the time of transaction creation
+3. Calculate amounts based on rates at the time of entry
+4. Preserve historical transactions with their original rates even after rate updates
+5. Provide rate history tracking for auditing and analysis purposes
+6. Support effective dates for rate changes
+
+When generating reports, the system should use the rates that were in effect at the time of each transaction, ensuring financial accuracy and data integrity.
+
 ## Core Features
 
 ### 1. User Management
@@ -147,6 +165,7 @@ I need this system to maintain consistent voucher numbers across related transac
 - Store all data in Supabase database
 - Implement proper relationships between tables
 - Enable row-level security for data protection
+- Design schema to support historical records with original rates and amounts
 
 ### UI Requirements
 - Responsive design for all screen sizes
@@ -154,6 +173,7 @@ I need this system to maintain consistent voucher numbers across related transac
 - Dashboard with key metrics
 - Consistent styling throughout application
 - Form validation for all inputs
+- Rate management interface for administrators
 
 ### Integration Requirements
 - Authentication via Supabase
@@ -167,12 +187,14 @@ I need this system to maintain consistent voucher numbers across related transac
 - Full access to all system features
 - Ability to create and manage manager accounts
 - Access to all reports and data
+- Capability to update rates and pricing structures
 
 ### Manager
 - Access to day-to-day operations
 - Record collections, processing, sales, and expenses
 - Manage vehicles, drivers, and trips
 - View operational reports
+- Use current rates for new transactions
 
 ## Database Schema Overview
 
@@ -180,6 +202,7 @@ The application uses the following main tables:
 - **profiles**: User information and roles
 - **locations**: Collection points, MRFs, and LSGIs
 - **materials**: Types of materials collected, processed, and sold
+- **rates**: Current and historical rates for various operations
 - **inward_entries**: Records of rejected waste received
 - **processing**: Records of waste segregation
 - **outward_entries**: Records of materials/waste sold or disposed
@@ -199,3 +222,4 @@ The application uses the following main tables:
 - Follow responsive design principles
 - Implement proper error handling and validation
 - Ensure data consistency and integrity
+- Design with scalability in mind for rate changes while preserving historical data
