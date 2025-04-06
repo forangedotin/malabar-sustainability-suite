@@ -2,7 +2,7 @@
 # Waste Management System - Client Requirements
 
 ## Project Overview
-This application is designed for a waste management company to track and manage their collection, inventory, vehicles, and logistics operations. The system allows managers to monitor material collections, inventory levels, sales, expenses, vehicle assignments, and transportation logistics.
+This application is designed for a waste management company to track and manage their collection, processing, inventory, sales, vehicles, and logistics operations. The system allows managers to monitor material collections, segregation processes, inventory levels, sales to different types of buyers, expenses, vehicle assignments, and transportation logistics.
 
 ## Core Features
 
@@ -15,32 +15,40 @@ This application is designed for a waste management company to track and manage 
 ### 2. Location Management
 - **Types of Locations**
   - Collection points where waste materials are collected
-  - Godowns (warehouses) where materials are stored
+  - Material Recovery Facilities (MRFs)/Godowns where materials are stored and processed
+  - Local Self-Government Institutions (LSGIs) as source of materials
 - **Location Information**
   - Name, address, district
   - Contact information
-  - Type classification
+  - Type classification (MRF, Collection Point, LSGI)
 
 ### 3. Collection Management
-- **Recording Collections**
-  - Track materials collected from various locations
-  - Record quantity, material type, and amount paid
-  - Support for commission agents and commission tracking
-  - Notes and additional information
+- **Waste Inward Entry**
+  - Record rejected waste received from LSGIs 
+  - Track quantities, rates, and total amounts
+  - Record vehicle information used for transport
+  - Track labor charges for loading/unloading
+  - Generate voucher numbers for tracking
 - **Collection Reports**
-  - Daily collection summaries
+  - Daily inward entry summaries
   - Collection by location and material type
 
 ### 4. Inventory Management
 - **Stock Tracking**
-  - Track material quantities in each godown
-  - Monitor inventory levels
-  - Record material specifics
+  - Track different material quantities in each MRF/godown
+  - Monitor inventory levels for both rejected and segregated waste
+  - Record material specifics (categories like HM, LD, AFR WASTE)
 - **Stock Transfer**
   - Move inventory between godowns
   - Track material transfers with complete history
 
-### 5. Vehicle Management
+### 5. Processing Management
+- **Segregation Tracking**
+  - Record segregation of rejected waste into different categories (HM, LD, etc.)
+  - Track labor charges for segregation and bailing
+  - Monitor processing efficiency and output
+
+### 6. Vehicle Management
 - **Vehicle Registry**
   - Register vehicles with details (registration number, type, capacity)
   - Track vehicle status (available, maintenance, on route, loading, unloading)
@@ -50,7 +58,7 @@ This application is designed for a waste management company to track and manage 
   - Track active assignments and history
   - End assignments when completed
 
-### 6. Driver Management
+### 7. Driver Management
 - **Driver Registry**
   - Register drivers with personal and license information
   - Track driver availability
@@ -60,7 +68,7 @@ This application is designed for a waste management company to track and manage 
   - Track driver-vehicle relationships
   - Maintain assignment history
 
-### 7. Trip Management
+### 8. Trip Management
 - **Trip Creation and Tracking**
   - Create transportation trips between locations
   - Record material being transported, quantity, and units
@@ -70,20 +78,34 @@ This application is designed for a waste management company to track and manage 
   - Update trip status (in progress, completed)
   - Record actual arrival times
 - **Token System**
-  - Generate unique tokens for trips
-  - Lookup trips by token code
+  - Generate unique voucher numbers for trips and transactions
+  - Lookup trips by voucher code
 
-### 8. Sales Management
-- **Sales Recording**
-  - Record sales of materials from inventory
+### 9. Sales Management
+- **Waste Outward Entry**
+  - Record sales of segregated materials to recycling parties
+  - Record disposal of rejected waste to AFR parties (like cement companies)
   - Track buyer information, quantity sold, and sale amount
+  - Record vehicle information for transport
   - Support different payment statuses
   - Update inventory automatically when sales are recorded
+- **Buyer Categories**
+  - Categorize buyers (Segregated Waste Parties, AFR Parties)
+  - Maintain buyer profiles and purchasing history
 - **Payment Tracking**
   - Track paid vs pending payments
   - Record partial payments and amount due
 
-### 9. Expense Management
+### 10. Labor Management
+- **Labor Cost Tracking**
+  - Record different types of labor costs:
+    - Loading/unloading charges
+    - Segregation charges
+    - Bailing charges
+  - Calculate labor costs based on weight and predefined rates
+  - Track total labor expenses by category and operation
+
+### 11. Expense Management
 - **Expense Recording**
   - Record expenses by category
   - Track expense amount and recipient
@@ -93,15 +115,17 @@ This application is designed for a waste management company to track and manage 
   - Categorize expenses for reporting
   - Track expenses by location and category
 
-### 10. Reports
+### 12. Reports
 - **Financial Reports**
   - Sales summary
   - Expense summary
   - Collection costs
+  - Labor costs
   - Profit and loss calculations
 - **Operational Reports**
   - Inventory levels
   - Collection volumes
+  - Segregation efficiency
   - Vehicle utilization
   - Trip efficiency
 
@@ -123,6 +147,7 @@ This application is designed for a waste management company to track and manage 
 - Authentication via Supabase
 - Real-time updates for inventory and vehicle status
 - Data export capabilities for reports
+- Voucher printing functionality
 
 ## User Roles
 
@@ -133,7 +158,7 @@ This application is designed for a waste management company to track and manage 
 
 ### Manager
 - Access to day-to-day operations
-- Record collections, sales, and expenses
+- Record collections, processing, sales, and expenses
 - Manage vehicles, drivers, and trips
 - View operational reports
 
@@ -141,16 +166,18 @@ This application is designed for a waste management company to track and manage 
 
 The application uses the following main tables:
 - **profiles**: User information and roles
-- **locations**: Collection points and godowns
-- **materials**: Types of materials collected and sold
-- **collections**: Records of collected materials
-- **inventory**: Current stock levels in godowns
+- **locations**: Collection points, MRFs, and LSGIs
+- **materials**: Types of materials collected, processed, and sold
+- **inward_entries**: Records of rejected waste received
+- **processing**: Records of waste segregation
+- **outward_entries**: Records of materials/waste sold or disposed
+- **inventory**: Current stock levels in MRFs/godowns
 - **stock_transfers**: Movement of materials between godowns
 - **vehicles**: Vehicle information
 - **drivers**: Driver information
 - **vehicle_assignments**: Relationship between vehicles and drivers
 - **trips**: Transportation logistics
-- **sales**: Sales transactions
+- **labor_charges**: Labor costs for various operations
 - **expenses**: Operational expenses
 
 ## Development Guidelines
