@@ -4,6 +4,18 @@
 ## Project Overview
 This application is designed for a waste management company to track and manage their collection, processing, inventory, sales, vehicles, and logistics operations. The system allows managers to monitor material collections, segregation processes, inventory levels, sales to different types of buyers, expenses, vehicle assignments, and transportation logistics.
 
+## Workflow Description
+
+As the operations manager of Malabar Eco, I need a comprehensive system to track our entire waste management process. Here's how our business works: We collect rejected waste from Local Self-Government Institutions (LSGIs) like Mankada GP in Malappuram. This waste arrives at our Material Recovery Facilities (MRFs) like Kuruvattur MRF via our vehicles. Upon arrival, we record details like voucher numbers (e.g., MPM/2425/0458), date, LSGI name, vehicle number, quantity (e.g., 5,500 kg), rate (₹6.4/kg), and total amount (₹35,200). We also track labor charges for loading/unloading (₹0.65/kg).
+
+Once received, the waste follows two paths: some goes through segregation while other portions remain as rejected waste. Our staff segregates materials into categories like HM (Hard Mix plastics) and LD (Low Density plastics). During segregation, we track labor costs, including segregation charges (₹6.5/kg) and bailing charges (₹0.8/kg).
+
+After processing, we sell segregated materials to recycling companies like DHARSHNI TRADERS. These outward entries record the buyer, vehicle number, quantities (e.g., 1,500 kg of HM at ₹13/kg and 1,500 kg of LD at ₹35/kg), and total value (₹72,000). The rejected waste that can't be recycled goes to cement companies like DALMIA CEMENT as Alternative Fuel and Raw Material (AFR). These transactions include details like quantity (20,500 kg), rate (₹2.4/kg), amount (₹49,200), and associated labor charges for bailing and loading.
+
+Our vehicles and drivers handle all transport between facilities and to buyers. We need to track vehicle assignments, driver schedules, and manage our fleet effectively. Throughout this process, we maintain inventory levels at each MRF, record all expenses, and need comprehensive financial and operational reporting to analyze our business performance.
+
+I need this system to maintain consistent voucher numbers across related transactions, update inventory in real-time, and provide easy-to-use interfaces for all our staff to record these operations accurately.
+
 ## Core Features
 
 ### 1. User Management
