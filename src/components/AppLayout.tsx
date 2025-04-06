@@ -79,7 +79,7 @@ export function AppLayout() {
           </div>
           
           <div className="hidden lg:block">
-            <h1 className="text-xl font-medium">Malabar Eco Solutions</h1>
+            <h1 className="text-xl font-medium text-green-800">Malabar Eco Solutions</h1>
           </div>
           
           <div className="w-10"></div> {/* Placeholder for balance */}
@@ -107,7 +107,7 @@ function LoadingScreen() {
       <div className="space-y-4 w-full max-w-md px-8">
         <LogoSmall />
         <div className="text-center">
-          <h2 className="text-2xl font-medium mb-2">Malabar Eco Solutions</h2>
+          <h2 className="text-2xl font-medium mb-2 text-green-800">Malabar Eco Solutions</h2>
           <p className="text-muted-foreground">Loading your dashboard...</p>
         </div>
         <div className="space-y-2 mt-6">
@@ -123,10 +123,12 @@ function LoadingScreen() {
 function LogoSmall() {
   return (
     <div className="flex items-center">
-      <div className="w-10 h-10 bg-gradient-to-br from-eco-green-500 to-eco-blue-600 rounded-md flex items-center justify-center text-white font-bold text-lg">
-        ME
-      </div>
-      <span className="ml-2 font-medium text-lg">MES</span>
+      <img 
+        src="/lovable-uploads/3d98cd6b-fac4-45ba-ab02-ca6bd954c997.png" 
+        alt="Malabar Eco Solutions Logo" 
+        className="h-10" 
+      />
+      <span className="ml-2 font-medium text-lg text-green-800">MES</span>
     </div>
   );
 }

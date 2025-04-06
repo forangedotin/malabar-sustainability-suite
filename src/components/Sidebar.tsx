@@ -92,6 +92,14 @@ export function Sidebar() {
           active={isActive('/reports')} 
         />
         
+        {/* Settings for all users */}
+        <NavItem 
+          icon={Settings} 
+          href="/settings" 
+          title="Settings" 
+          active={isActive('/settings')} 
+        />
+        
         {/* Admin only sections */}
         {role === 'admin' && (
           <>
@@ -106,13 +114,6 @@ export function Sidebar() {
               href="/managers" 
               title="Managers" 
               active={isActive('/managers')} 
-            />
-            
-            <NavItem 
-              icon={Settings} 
-              href="/settings" 
-              title="Settings" 
-              active={isActive('/settings')} 
             />
           </>
         )}
@@ -146,11 +147,13 @@ export function Sidebar() {
 function Logo() {
   return (
     <Link to="/" className="flex items-center space-x-2">
-      <div className="h-10 w-10 bg-gradient-to-br from-eco-green-500 to-eco-blue-600 rounded-md flex items-center justify-center text-white font-bold text-lg">
-        ME
-      </div>
-      <div>
-        <h1 className="text-lg font-semibold">Malabar Eco</h1>
+      <img 
+        src="/lovable-uploads/3d98cd6b-fac4-45ba-ab02-ca6bd954c997.png" 
+        alt="Malabar Eco Solutions Logo" 
+        className="h-12"
+      />
+      <div className="hidden md:block">
+        <h1 className="text-lg font-semibold text-green-800">Malabar Eco</h1>
         <p className="text-xs text-muted-foreground">Waste Management</p>
       </div>
     </Link>
@@ -171,11 +174,11 @@ function NavItem({ icon: Icon, href, title, active }: NavItemProps) {
       className={cn(
         "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
         active 
-          ? "bg-primary/10 text-primary" 
+          ? "bg-green-100 text-green-800" 
           : "text-muted-foreground hover:text-foreground hover:bg-muted"
       )}
     >
-      <Icon className={cn("mr-3 h-5 w-5", active ? "text-primary" : "")} />
+      <Icon className={cn("mr-3 h-5 w-5", active ? "text-green-600" : "")} />
       <span>{title}</span>
     </Link>
   );

@@ -17,7 +17,8 @@ import {
   User,
   Route,
   Search,
-  Car
+  Car,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,7 +53,7 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, adminOnly = false })
       className={cn(
         'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all',
         isActive
-          ? 'bg-primary text-white'
+          ? 'bg-green-100 text-green-800'
           : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
       )}
     >
@@ -106,27 +107,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         )}
       >
         <div className="flex h-16 items-center border-b px-4">
-          <Link to="/dashboard" className="flex items-center gap-2 font-bold" onClick={closeSidebar}>
-            <svg
-              className="h-6 w-6 text-primary"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M2 22a8 8 0 0 1 12.142-6.825" />
-              <path d="M16 4.651A8 8 0 1 0 2 10.5" />
-              <path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-              <circle cx="17" cy="17" r="5" />
-              <path d="m17 14 3 3-3 3" />
-              <path d="M20 17h-6" />
-            </svg>
-            <span className="text-xl">Malabar Eco</span>
+          <Link to="/dashboard" className="flex items-center gap-2" onClick={closeSidebar}>
+            <img 
+              src="/lovable-uploads/3d98cd6b-fac4-45ba-ab02-ca6bd954c997.png" 
+              alt="Malabar Eco Solutions Logo" 
+              className="h-10" 
+            />
+            <span className="text-xl font-bold text-green-800">Malabar Eco</span>
           </Link>
           {isMobile && (
             <Button
@@ -148,6 +135,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <NavItem to="/sales" icon={<TrendingUp className="h-5 w-5" />} label="Sales" />
             <NavItem to="/expenses" icon={<DollarSign className="h-5 w-5" />} label="Expenses" />
             <NavItem to="/reports" icon={<FileText className="h-5 w-5" />} label="Reports" />
+            <NavItem to="/settings" icon={<Settings className="h-5 w-5" />} label="Settings" />
             <NavItem to="/managers" icon={<Users className="h-5 w-5" />} label="Managers" adminOnly={true} />
             
             <div className="my-2 border-t pt-2">
@@ -163,7 +151,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </nav>
         <div className="border-t p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-white">
               {profile?.first_name?.[0] || profile?.last_name?.[0] || 'U'}
             </div>
             <div className="flex flex-1 flex-col overflow-hidden">
@@ -186,7 +174,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <Button variant="ghost" size="icon" onClick={toggleSidebar}>
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="ml-4 font-bold">Malabar Eco Solutions</div>
+          <div className="ml-4 font-bold text-green-800">Malabar Eco Solutions</div>
           <div className="ml-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

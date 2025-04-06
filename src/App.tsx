@@ -16,6 +16,8 @@ import SalesPage from './pages/sales/SalesPage';
 import ExpensesPage from './pages/expenses/ExpensesPage';
 import ReportsPage from './pages/reports/ReportsPage';
 import ManagersPage from './pages/managers/ManagersPage';
+import SettingsPage from './pages/settings/SettingsPage';
+import RatesPage from './pages/settings/RatesPage';
 
 function App() {
   return (
@@ -99,6 +101,25 @@ function App() {
             element={
               <ProtectedRoute adminOnly={true}>
                 <ManagersPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Settings Routes */}
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/settings/rates"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <RatesPage />
               </ProtectedRoute>
             }
           />
